@@ -381,6 +381,12 @@ textarea.finput{resize:vertical;min-height:82px;line-height:1.55}
       <div class="legend-item"><div class="ldot" style="background:var(--ok)"></div>Mais de 60 dias</div>
     </div>
     <div class="toolbar">
+<button class="btn btn-ghost" onclick="toggleSelectAll()">
+✓ Selecionar Todos
+</button>
+<button class="btn btn-ghost" onclick="deleteSelected()">
+🗑 Excluir Selecionados
+</button>
       <div class="search-wrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input class="search-input" id="sv" placeholder="Buscar cliente, CNPJ ou contrato…" oninput="renderVenc()"/>
@@ -524,7 +530,19 @@ textarea.finput{resize:vertical;min-height:82px;line-height:1.55}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ── STATE ──────────────────────────────────────────────────────
-let db = (()=>{ try{ return JSON.parse(localStorage.getItem('cd3')||'[]'); } catch{ return []; } })();
+let db = (()=>{ 
+  try{ 
+    const data = JSON.parse(localStorage.getItem('cd3')||'[]');
+    return data.map(c => ({
+      ...c,
+      anivDate: c.anivDate ? new Date(c.anivDate) : null,
+      vencDate: c.vencDate ? new Date(c.vencDate) : null
+    }));
+  } catch{ 
+    return []; 
+  } 
+})();
+let selectedIds = new Set();
 let editId = null, sortKey = 'venc', sortDir = 1;
 const TODAY = (()=>{ const d=new Date(); d.setHours(0,0,0,0); return d; })();
 
@@ -622,6 +640,10 @@ function renderVenc(){
     tr.style.animationDelay=(i*25)+'ms';
     tr.classList.add(); // no class needed, CSS handles tbody tr
     tr.innerHTML=`
+      <td>
+        <input type="checkbox" ${selectedIds.has(c.id)?'checked':''}
+          onchange="toggleSelection('${c.id}', this.checked)">
+      </td>
       <td class="td-name">${esc(c.client)}</td>
       <td class="td-cnpj">${esc(c.cnpj||'—')}</td>
       <td class="td-num">${esc(c.contrato||'—')}</td>
@@ -682,6 +704,10 @@ function renderReaj(){
     const nx=nextAniv(c.anivDate), d=diff(nx), st=stReaj(d);
     const tr=document.createElement('tr');
     tr.innerHTML=`
+      <td>
+        <input type="checkbox" ${selectedIds.has(c.id)?'checked':''}
+          onchange="toggleSelection('${c.id}', this.checked)">
+      </td>
       <td class="td-name">${esc(c.client)}</td>
       <td class="td-cnpj">${esc(c.cnpj||'—')}</td>
       <td class="td-num">${esc(c.contrato||'—')}</td>
@@ -873,6 +899,43 @@ function showToast(msg,type='ok'){
   el.className='toast show '+(type==='ok'?'ok':'err');
   clearTimeout(toastT);
   toastT=setTimeout(()=>{ el.className='toast'; },3500);
+}
+
+
+// ── SELEÇÃO EM MASSA ──────────────────────────────────────────
+function toggleSelection(id, checked){
+  if(checked) selectedIds.add(id);
+  else selectedIds.delete(id);
+}
+
+function toggleSelectAll(force){
+  const visibleRows = [...db];
+  const shouldSelect = force !== undefined ? force : selectedIds.size !== visibleRows.length;
+
+  if(shouldSelect){
+    visibleRows.forEach(c => selectedIds.add(c.id));
+  } else {
+    selectedIds.clear();
+  }
+
+  renderAll();
+}
+
+function deleteSelected(){
+  if(selectedIds.size === 0){
+    showToast('Nenhum contrato selecionado.','err');
+    return;
+  }
+
+  if(!confirm(`Excluir ${selectedIds.size} contrato(s)?`)) return;
+
+  db = db.filter(c => !selectedIds.has(c.id));
+  selectedIds.clear();
+
+  saveDB();
+  renderAll();
+
+  showToast('Contratos excluídos com sucesso!','ok');
 }
 
 // ── INIT ──────────────────────────────────────────────────────
