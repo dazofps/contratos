@@ -1,2 +1,2 @@
 # contratos
-App de gestão de contratos
+App básico de gestão de contratos.
