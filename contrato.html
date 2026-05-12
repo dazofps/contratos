@@ -403,6 +403,9 @@ textarea.finput{resize:vertical;min-height:82px;line-height:1.55}
       <div class="table-scroll">
         <table id="tbl-venc">
           <thead><tr>
+            <th style="width:40px;text-align:center">
+              <input type="checkbox" id="check-all-venc" onchange="toggleSelectAll(this.checked)">
+            </th>
             <th id="th-vc" onclick="doSort('client')">Cliente <span class="sort-arrow">↕</span></th>
             <th>CNPJ</th><th>Contrato</th>
             <th id="th-vv" onclick="doSort('venc')" class="th-active">Vencimento <span class="sort-arrow">↕</span></th>
@@ -443,6 +446,9 @@ textarea.finput{resize:vertical;min-height:82px;line-height:1.55}
       <div class="table-scroll">
         <table id="tbl-reaj">
           <thead><tr>
+            <th style="width:40px;text-align:center">
+              <input type="checkbox" id="check-all-reaj" onchange="toggleSelectAll(this.checked)">
+            </th>
             <th id="th-rc" onclick="doSort('client')">Cliente <span class="sort-arrow">↕</span></th>
             <th>CNPJ</th><th>Contrato</th>
             <th id="th-ra" onclick="doSort('aniv')" class="th-active">Aniv. Reajuste <span class="sort-arrow">↕</span></th>
