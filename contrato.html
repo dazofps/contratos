@@ -231,6 +231,27 @@ th:hover{color:var(--text)}
 tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
 tbody tr:last-child{border-bottom:none}
 tbody tr:hover{background:rgba(22,40,71,.6)}
+.cb-cell{width:38px;padding:10px 0 10px 16px !important}
+.cb-wrap{display:flex;align-items:center;justify-content:center}
+input[type=checkbox]{
+  width:16px;height:16px;cursor:pointer;accent-color:var(--blue);
+  border-radius:4px;flex-shrink:0;
+}
+tbody tr.selected{background:rgba(37,99,235,.1) !important}
+tbody tr.selected:hover{background:rgba(37,99,235,.15) !important}
+.bulk-bar{
+  display:none;align-items:center;gap:12px;
+  background:linear-gradient(90deg,rgba(37,99,235,.15),rgba(37,99,235,.05));
+  border:1px solid rgba(37,99,235,.3);border-radius:8px;
+  padding:10px 16px;margin-bottom:12px;
+  animation:slideDown .2s ease;
+}
+.bulk-bar.visible{display:flex}
+.bulk-count{
+  font-family:'DM Mono',monospace;font-size:12px;
+  color:var(--blue2);font-weight:500;flex:1;
+}
+@keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 td{padding:13px 16px;font-size:13px;vertical-align:middle}
 .td-name{font-weight:500}
 .td-cnpj,.td-num{font-family:'DM Mono',monospace;font-size:11.5px}
@@ -476,10 +497,19 @@ header{padding-left:max(32px,env(safe-area-inset-left));padding-right:max(32px,e
         <option value="expired">Vencidos</option>
       </select>
     </div>
+<div class="bulk-bar" id="bulk-venc">
+      <span class="bulk-count" id="bulk-venc-count">0 selecionados</span>
+      <button class="btn btn-ghost" onclick="clearSelection('venc')" style="padding:6px 12px;font-size:12px">Limpar seleção</button>
+      <button class="btn" onclick="deleteSelected('venc')" style="background:var(--danger-bg);color:var(--danger);border:1px solid rgba(239,68,68,.3);padding:6px 14px;font-size:12px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        Excluir selecionados
+      </button>
+    </div>
     <div class="table-card">
       <div class="table-scroll">
         <table id="tbl-venc">
           <thead><tr>
+            <th class="cb-cell"><input type="checkbox" id="chk-all-venc" onchange="toggleAllVenc(this)" title="Selecionar todos"/></th>
             <th id="th-vc" onclick="doSort('client')">Cliente <span class="sort-arrow">↕</span></th>
             <th>CNPJ</th><th>Contrato</th>
             <th id="th-vv" onclick="doSort('venc')" class="th-active">Vencimento <span class="sort-arrow">↕</span></th>
@@ -516,10 +546,19 @@ header{padding-left:max(32px,env(safe-area-inset-left));padding-right:max(32px,e
         <option value="ok">Em dia</option>
       </select>
     </div>
+<div class="bulk-bar" id="bulk-reaj">
+      <span class="bulk-count" id="bulk-reaj-count">0 selecionados</span>
+      <button class="btn btn-ghost" onclick="clearSelection('reaj')" style="padding:6px 12px;font-size:12px">Limpar seleção</button>
+      <button class="btn" onclick="deleteSelected('reaj')" style="background:var(--danger-bg);color:var(--danger);border:1px solid rgba(239,68,68,.3);padding:6px 14px;font-size:12px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        Excluir selecionados
+      </button>
+    </div>
     <div class="table-card">
       <div class="table-scroll">
         <table id="tbl-reaj">
           <thead><tr>
+            <th class="cb-cell"><input type="checkbox" id="chk-all-reaj" onchange="toggleAllReaj(this)" title="Selecionar todos"/></th>
             <th id="th-rc" onclick="doSort('client')">Cliente <span class="sort-arrow">↕</span></th>
             <th>CNPJ</th><th>Contrato</th>
             <th id="th-ra" onclick="doSort('aniv')" class="th-active">Aniv. Reajuste <span class="sort-arrow">↕</span></th>
@@ -754,6 +793,7 @@ function renderVenc(){
     tr.style.animationDelay=(i*25)+'ms';
     tr.classList.add(); // no class needed, CSS handles tbody tr
     tr.innerHTML=`
+      <td class="cb-cell"><div class="cb-wrap"><input type="checkbox" class="row-cb" data-id="${c.id}" data-tab="venc" onchange="onRowCheck(this,'venc')"/></div></td>
       <td class="td-name">${esc(c.client)}</td>
       <td class="td-cnpj">${esc(c.cnpj||'—')}</td>
       <td class="td-num">${esc(c.contrato||'—')}</td>
@@ -814,6 +854,7 @@ function renderReaj(){
     const nx=nextAniv(c.anivDate), d=diff(nx), st=stReaj(d);
     const tr=document.createElement('tr');
     tr.innerHTML=`
+      <td class="cb-cell"><div class="cb-wrap"><input type="checkbox" class="row-cb" data-id="${c.id}" data-tab="reaj" onchange="onRowCheck(this,'reaj')"/></div></td>
       <td class="td-name">${esc(c.client)}</td>
       <td class="td-cnpj">${esc(c.cnpj||'—')}</td>
       <td class="td-num">${esc(c.contrato||'—')}</td>
@@ -852,6 +893,98 @@ function kpiHTML(items){
 }
 
 function renderAll(){ renderVenc(); renderReaj(); }
+
+// ── SELECTION & BULK DELETE ───────────────────────────────────
+let selectedIds = new Set();
+
+function onRowCheck(cb, tab){
+  const id = cb.dataset.id;
+  const tr = cb.closest('tr');
+  if(cb.checked){ selectedIds.add(id); tr.classList.add('selected'); }
+  else{ selectedIds.delete(id); tr.classList.remove('selected'); }
+  updateBulkBar(tab);
+  syncHeaderCheckbox(tab);
+}
+
+function toggleAllVenc(masterCb){
+  document.querySelectorAll('#tbl-venc .row-cb').forEach(cb=>{
+    cb.checked = masterCb.checked;
+    const tr = cb.closest('tr');
+    if(masterCb.checked){ selectedIds.add(cb.dataset.id); tr.classList.add('selected'); }
+    else{ selectedIds.delete(cb.dataset.id); tr.classList.remove('selected'); }
+  });
+  updateBulkBar('venc');
+}
+
+function toggleAllReaj(masterCb){
+  document.querySelectorAll('#tbl-reaj .row-cb').forEach(cb=>{
+    cb.checked = masterCb.checked;
+    const tr = cb.closest('tr');
+    if(masterCb.checked){ selectedIds.add(cb.dataset.id); tr.classList.add('selected'); }
+    else{ selectedIds.delete(cb.dataset.id); tr.classList.remove('selected'); }
+  });
+  updateBulkBar('reaj');
+}
+
+function syncHeaderCheckbox(tab){
+  const all = document.querySelectorAll(`#tbl-${tab} .row-cb`);
+  const checked = document.querySelectorAll(`#tbl-${tab} .row-cb:checked`);
+  const master = document.getElementById(`chk-all-${tab}`);
+  if(!master) return;
+  master.indeterminate = checked.length > 0 && checked.length < all.length;
+  master.checked = all.length > 0 && checked.length === all.length;
+}
+
+function updateBulkBar(tab){
+  const visibleIds = new Set([...document.querySelectorAll(`#tbl-${tab} .row-cb`)].map(cb=>cb.dataset.id));
+  const count = [...selectedIds].filter(id=>visibleIds.has(id)).length;
+  const bar = document.getElementById(`bulk-${tab}`);
+  const countEl = document.getElementById(`bulk-${tab}-count`);
+  if(bar){ bar.classList.toggle('visible', count > 0); }
+  if(countEl){ countEl.textContent = count === 1 ? '1 selecionado' : `${count} selecionados`; }
+}
+
+function clearSelection(tab){
+  document.querySelectorAll(`#tbl-${tab} .row-cb`).forEach(cb=>{
+    selectedIds.delete(cb.dataset.id);
+    cb.checked = false;
+    cb.closest('tr').classList.remove('selected');
+  });
+  const master = document.getElementById(`chk-all-${tab}`);
+  if(master){ master.checked = false; master.indeterminate = false; }
+  updateBulkBar(tab);
+}
+
+function deleteSelected(tab){
+  const visibleIds = new Set([...document.querySelectorAll(`#tbl-${tab} .row-cb`)].map(cb=>cb.dataset.id));
+  const toDelete = [...selectedIds].filter(id=>visibleIds.has(id));
+  if(!toDelete.length) return;
+  if(!confirm(`Excluir ${toDelete.length} contrato(s) selecionado(s)?`)) return;
+  toDelete.forEach(id=>selectedIds.delete(id));
+  db = db.filter(c=>!toDelete.includes(c.id));
+  saveDB(); renderAll();
+  showToast(`${toDelete.length} contrato(s) excluído(s).`, 'ok');
+}
+
+// Restaurar estado de seleção após re-render
+const _origRenderAll = renderAll;
+// Override renderAll to restore selections
+(function(){
+  const _orig = renderAll;
+  window.renderAll = function(){
+    _orig();
+    ['venc','reaj'].forEach(tab=>{
+      document.querySelectorAll(`#tbl-${tab} .row-cb`).forEach(cb=>{
+        if(selectedIds.has(cb.dataset.id)){
+          cb.checked=true;
+          cb.closest('tr').classList.add('selected');
+        }
+      });
+      updateBulkBar(tab);
+      syncHeaderCheckbox(tab);
+    });
+  };
+})();
 
 // ── OVERLAY ───────────────────────────────────────────────────
 function openOv(id){ document.getElementById(id).classList.add('open'); }
@@ -1128,57 +1261,6 @@ saveDB = function(){
   if(syncEnabled) setTimeout(pushToBin, 600);
 };
 
-  // ── BULK SELECTION ─────────────────────────────────────────────
-let selectedIds = new Set();
-
-function onRowCheck(cb, tab) {
-  const id = cb.dataset.id;
-  if (cb.checked) selectedIds.add(id);
-  else selectedIds.delete(id);
-  updateBulkBar(tab);
-}
-
-function toggleAllVenc(master) {
-  document.querySelectorAll('#tbl-venc .row-cb').forEach(cb => {
-    cb.checked = master.checked;
-    if (master.checked) selectedIds.add(cb.dataset.id);
-    else selectedIds.delete(cb.dataset.id);
-  });
-  updateBulkBar('venc');
-}
-
-function toggleAllReaj(master) {
-  document.querySelectorAll('#tbl-reaj .row-cb').forEach(cb => {
-    cb.checked = master.checked;
-    if (master.checked) selectedIds.add(cb.dataset.id);
-    else selectedIds.delete(cb.dataset.id);
-  });
-  updateBulkBar('reaj');
-}
-
-function updateBulkBar(tab) {
-  const count = [...selectedIds].filter(id => document.querySelector(`#tbl-${tab} .row-cb[data-id="${id}"]`)).length;
-  const bar = document.getElementById(`bulk-${tab}`);
-  if (bar) bar.style.display = count > 0 ? 'flex' : 'none';
-  const countEl = document.getElementById(`bulk-${tab}-count`);
-  if (countEl) countEl.textContent = count + ' selecionado' + (count !== 1 ? 's' : '');
-}
-
-function clearSelection(tab) {
-  selectedIds.clear();
-  document.querySelectorAll(`#tbl-${tab} .row-cb`).forEach(cb => cb.checked = false);
-  updateBulkBar(tab);
-}
-
-function deleteSelected(tab) {
-  if (!selectedIds.size || !confirm(`Excluir ${selectedIds.size} contrato(s)?`)) return;
-  db = db.filter(c => !selectedIds.has(c.id));
-  saveDB();
-  renderAll();
-  showToast(`${selectedIds.size} contrato(s) excluído(s).`, 'ok');
-  selectedIds.clear();
-}
-  
 // ── INIT ──
 renderAll();
 startSync();
