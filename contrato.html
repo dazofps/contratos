@@ -1057,13 +1057,13 @@ function showToast(msg,type='ok'){
   toastT=setTimeout(()=>{ el.className='toast'; },3500);
 }
 
-  
-// ── JSONBIN SYNC ─────────────────────────────────────────────
+<script>
+// ── JSONBIN SYNC (VERSÃO CORRIGIDA E LIMPA) ─────────────────────────
 let JSONBIN_BIN_ID  = localStorage.getItem('gmt_bin_id')  || '';
 let JSONBIN_API_KEY = localStorage.getItem('gmt_api_key') || '';
 let syncEnabled = !!(JSONBIN_BIN_ID && JSONBIN_API_KEY);
 
-const SYNC_INTERVAL = 45000; // 45 segundos
+const SYNC_INTERVAL = 45000;
 let lastSyncHash = '';
 let isSyncing = false;
 let syncTimer = null;
@@ -1088,10 +1088,8 @@ function deserC(c) {
   };
 }
 
-// ====================== PUSH (Enviar) ======================
 async function pushToBin() {
   if (!syncEnabled || isSyncing) return;
-  
   const currentHash = hashDB(db);
   if (currentHash === lastSyncHash) return;
 
@@ -1109,19 +1107,18 @@ async function pushToBin() {
       body: JSON.stringify({ contracts: db.map(serC) })
     });
 
-    const data = await response.json();
-
     if (response.ok) {
       lastSyncHash = currentHash;
       setSyncStatus('ok');
-      console.log('✅ Push realizado com sucesso:', data);
+      console.log('✅ Push realizado com sucesso');
     } else {
-      console.error('❌ Push falhou:', response.status, data);
+      const err = await response.json().catch(() => ({}));
+      console.error('Push error:', response.status, err);
       setSyncStatus('err');
-      showToast(`Erro ao enviar: ${response.status} - ${data.message || 'Verifique as chaves'}`, 'err');
+      showToast(`Erro ao enviar: ${response.status}`, 'err');
     }
   } catch (e) {
-    console.error('❌ Erro de rede no Push:', e);
+    console.error('Erro no push:', e);
     setSyncStatus('err');
     showToast('Erro de conexão ao enviar dados', 'err');
   } finally {
@@ -1129,7 +1126,6 @@ async function pushToBin() {
   }
 }
 
-// ====================== PULL (Receber) ======================
 async function pullFromBin() {
   if (!syncEnabled || isSyncing) return;
 
@@ -1138,66 +1134,50 @@ async function pullFromBin() {
 
   try {
     const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
-      headers: {
-        'X-Master-Key': JSONBIN_API_KEY
-      }
+      headers: { 'X-Master-Key': JSONBIN_API_KEY }
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('❌ Pull falhou:', response.status, errorData);
-      setSyncStatus('err');
-      showToast(`Erro ao buscar dados: ${response.status}`, 'err');
-      return;
-    }
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const result = await response.json();
     const remoteContracts = result.record?.contracts || [];
 
-    if (remoteContracts.length >= 0) {
-      db = remoteContracts.map(deserC);
-      localStorage.setItem('cd3', JSON.stringify(db.map(serC)));
-      
-      lastSyncHash = hashDB(db);
-      renderAll();
-      setSyncStatus('ok');
-      console.log(`✅ Pull realizado com sucesso: ${db.length} contratos`);
-    }
+    db = remoteContracts.map(deserC);
+    localStorage.setItem('cd3', JSON.stringify(db.map(serC)));
+    
+    lastSyncHash = hashDB(db);
+    renderAll();
+    setSyncStatus('ok');
+    console.log(`✅ Sincronizado: ${db.length} contratos`);
   } catch (e) {
-    console.error('❌ Erro de rede no Pull:', e);
+    console.error('Erro no pull:', e);
     setSyncStatus('err');
-    showToast('Erro de conexão ao buscar dados', 'err');
+    showToast('Erro ao buscar dados do servidor', 'err');
   } finally {
     isSyncing = false;
   }
 }
 
-// ====================== STATUS ======================
 function setSyncStatus(st) {
   const el = document.getElementById('sync-status');
   if (!el) return;
-
-  const statusMap = {
-    off:     { ico: '🔴', txt: 'Sync off' },
-    ok:      { ico: '🟢', txt: 'Sincronizado' },
-    syncing: { ico: '🔄', txt: 'Sincronizando...' },
-    err:     { ico: '🟡', txt: 'Erro de sync' }
+  const map = {
+    off:     {ico:'🔴', txt:'Sync off'},
+    ok:      {ico:'🟢', txt:'Sincronizado'},
+    syncing: {ico:'🔄', txt:'Sincronizando...'},
+    err:     {ico:'🟡', txt:'Erro de sync'}
   };
-
-  const m = statusMap[st] || statusMap.off;
+  const m = map[st] || map.off;
   el.innerHTML = `<span class="sync-ico">${m.ico}</span><span>${m.txt}</span>`;
   el.className = `sync-pill ${st}`;
 }
 
-// ====================== INICIALIZAÇÃO ======================
 function startSync() {
   if (!syncEnabled) {
     setSyncStatus('off');
     return;
   }
-
-  console.log('🔄 Iniciando sincronização com JSONBin...');
-  pullFromBin();                    // primeira carga
+  pullFromBin();
   if (syncTimer) clearInterval(syncTimer);
   syncTimer = setInterval(pullFromBin, SYNC_INTERVAL);
 }
@@ -1205,11 +1185,7 @@ function startSync() {
 function saveSyncConfig() {
   const bid = document.getElementById('sync-bin-id').value.trim();
   const key = document.getElementById('sync-api-key').value.trim();
-
-  if (!bid || !key) {
-    showToast('Preencha BIN ID e API Key', 'err');
-    return;
-  }
+  if (!bid || !key) return showToast('Preencha BIN ID e API Key', 'err');
 
   JSONBIN_BIN_ID = bid;
   JSONBIN_API_KEY = key;
@@ -1220,38 +1196,33 @@ function saveSyncConfig() {
 
   closeOv('ov-sync');
   startSync();
-  showToast('✅ Sync configurado e ativado!', 'ok');
+  showToast('✅ Sync configurado com sucesso!', 'ok');
 }
 
 function clearSyncConfig() {
-  JSONBIN_BIN_ID = '';
+  JSONBIN_BIN_ID = ''; 
   JSONBIN_API_KEY = '';
   syncEnabled = false;
-
   localStorage.removeItem('gmt_bin_id');
   localStorage.removeItem('gmt_api_key');
   if (syncTimer) clearInterval(syncTimer);
-
   closeOv('ov-sync');
   setSyncStatus('off');
   showToast('Sync desativado', 'ok');
 }
 
-// Sobrescrevendo saveDB para fazer push automático
-const originalSaveDB = saveDB;
+// Sobrescreve saveDB para fazer push automático
+const oldSaveDB = saveDB;
 saveDB = function() {
-  localStorage.setItem('cd3', JSON.stringify(db.map(serC)));
-  if (syncEnabled) {
-    setTimeout(pushToBin, 800); // pequeno delay para evitar conflitos
-  }
+  oldSaveDB();
+  if (syncEnabled) setTimeout(pushToBin, 800);
 };
 
-// Preenche os campos no modal se já estiver configurado
 window.addEventListener('DOMContentLoaded', () => {
   if (JSONBIN_BIN_ID) document.getElementById('sync-bin-id').value = JSONBIN_BIN_ID;
   if (JSONBIN_API_KEY) document.getElementById('sync-api-key').value = JSONBIN_API_KEY;
 });
-
+</script>
 
 // ── SELECTION & BULK DELETE ───────────────────────────────────
 let selectedIds = new Set();
