@@ -1048,17 +1048,16 @@ function swapLogo(e){
 
 // ── TOAST ─────────────────────────────────────────────────────
 let toastT;
-function showToast(msg,type='ok'){
-  const el=document.getElementById('toast');
-  document.getElementById('t-ico').textContent=type==='ok'?'✅':'⚠️';
-  document.getElementById('t-msg').textContent=msg;
-  el.className='toast show '+(type==='ok'?'ok':'err');
+function showToast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  document.getElementById('t-ico').textContent = type === 'ok' ? '✅' : '⚠️';
+  document.getElementById('t-msg').textContent = msg;
+  el.className = 'toast show ' + (type === 'ok' ? 'ok' : 'err');
   clearTimeout(toastT);
-  toastT=setTimeout(()=>{ el.className='toast'; },3500);
+  toastT = setTimeout(() => { el.className = 'toast'; }, 3500);
 }
 
-<script>
-// ── JSONBIN SYNC (VERSÃO CORRIGIDA E LIMPA) ─────────────────────────
+// ── JSONBIN SYNC (VERSÃO FINAL CORRIGIDA) ─────────────────────────
 let JSONBIN_BIN_ID  = localStorage.getItem('gmt_bin_id')  || '';
 let JSONBIN_API_KEY = localStorage.getItem('gmt_api_key') || '';
 let syncEnabled = !!(JSONBIN_BIN_ID && JSONBIN_API_KEY);
@@ -1110,17 +1109,16 @@ async function pushToBin() {
     if (response.ok) {
       lastSyncHash = currentHash;
       setSyncStatus('ok');
-      console.log('✅ Push realizado com sucesso');
+      console.log('✅ Push realizado');
     } else {
-      const err = await response.json().catch(() => ({}));
-      console.error('Push error:', response.status, err);
+      console.error('Push falhou:', response.status);
       setSyncStatus('err');
       showToast(`Erro ao enviar: ${response.status}`, 'err');
     }
   } catch (e) {
     console.error('Erro no push:', e);
     setSyncStatus('err');
-    showToast('Erro de conexão ao enviar dados', 'err');
+    showToast('Erro de conexão ao enviar', 'err');
   } finally {
     isSyncing = false;
   }
@@ -1148,11 +1146,11 @@ async function pullFromBin() {
     lastSyncHash = hashDB(db);
     renderAll();
     setSyncStatus('ok');
-    console.log(`✅ Sincronizado: ${db.length} contratos`);
+    console.log(`✅ Sincronizado com ${db.length} contratos`);
   } catch (e) {
     console.error('Erro no pull:', e);
     setSyncStatus('err');
-    showToast('Erro ao buscar dados do servidor', 'err');
+    showToast('Erro ao buscar dados', 'err');
   } finally {
     isSyncing = false;
   }
@@ -1196,7 +1194,7 @@ function saveSyncConfig() {
 
   closeOv('ov-sync');
   startSync();
-  showToast('✅ Sync configurado com sucesso!', 'ok');
+  showToast('✅ Sync configurado!', 'ok');
 }
 
 function clearSyncConfig() {
@@ -1211,7 +1209,6 @@ function clearSyncConfig() {
   showToast('Sync desativado', 'ok');
 }
 
-// Sobrescreve saveDB para fazer push automático
 const oldSaveDB = saveDB;
 saveDB = function() {
   oldSaveDB();
@@ -1222,7 +1219,6 @@ window.addEventListener('DOMContentLoaded', () => {
   if (JSONBIN_BIN_ID) document.getElementById('sync-bin-id').value = JSONBIN_BIN_ID;
   if (JSONBIN_API_KEY) document.getElementById('sync-api-key').value = JSONBIN_API_KEY;
 });
-</script>
 
 // ── SELECTION & BULK DELETE ───────────────────────────────────
 let selectedIds = new Set();
@@ -1235,7 +1231,6 @@ function onRowCheck(cb, tab){
   updateBulkBar(tab);
   syncHeaderCheckbox(tab);
 }
-
 function toggleAllVenc(masterCb){
   document.querySelectorAll('#tbl-venc .row-cb').forEach(cb=>{
     cb.checked = masterCb.checked;
