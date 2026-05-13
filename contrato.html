@@ -1128,6 +1128,61 @@ saveDB = function(){
   if(syncEnabled) setTimeout(pushToBin, 600);
 };
 
+  // ── BULK SELECTION ─────────────────────────────────────────────
+let selectedIds = new Set();
+
+function onRowCheck(cb, tab) {
+  const id = cb.dataset.id;
+  if (cb.checked) selectedIds.add(id);
+  else selectedIds.delete(id);
+  updateBulkBar(tab);
+}
+
+function toggleAllVenc(master) {
+  document.querySelectorAll('#tbl-venc .row-cb').forEach(cb => {
+    cb.checked = master.checked;
+    if (master.checked) selectedIds.add(cb.dataset.id);
+    else selectedIds.delete(cb.dataset.id);
+  });
+  updateBulkBar('venc');
+}
+
+function toggleAllReaj(master) {
+  document.querySelectorAll('#tbl-reaj .row-cb').forEach(cb => {
+    cb.checked = master.checked;
+    if (master.checked) selectedIds.add(cb.dataset.id);
+    else selectedIds.delete(cb.dataset.id);
+  });
+  updateBulkBar('reaj');
+}
+
+function updateBulkBar(tab) {
+  const count = [...selectedIds].filter(id => document.querySelector(`#tbl-${tab} .row-cb[data-id="${id}"]`)).length;
+  const bar = document.getElementById(`bulk-${tab}`);
+  if (bar) bar.style.display = count > 0 ? 'flex' : 'none';
+  const countEl = document.getElementById(`bulk-${tab}-count`);
+  if (countEl) countEl.textContent = count + ' selecionado' + (count !== 1 ? 's' : '');
+}
+
+function clearSelection(tab) {
+  selectedIds.clear();
+  document.querySelectorAll(`#tbl-${tab} .row-cb`).forEach(cb => cb.checked = false);
+  updateBulkBar(tab);
+}
+
+function deleteSelected(tab) {
+  if (!selectedIds.size || !confirm(`Excluir ${selectedIds.size} contrato(s)?`)) return;
+  db = db.filter(c => !selectedIds.has(c.id));
+  saveDB();
+  renderAll();
+  showToast(`${selectedIds.size} contrato(s) excluído(s).`, 'ok');
+  selectedIds.clear();
+}
+
+// ── INIT ──
+renderAll();
+</script>
+  
 // ── INIT ──
 renderAll();
 startSync();
