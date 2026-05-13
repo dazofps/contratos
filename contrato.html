@@ -1057,126 +1057,201 @@ function showToast(msg,type='ok'){
   toastT=setTimeout(()=>{ el.className='toast'; },3500);
 }
 
-
+<!-- Cole este bloco inteiro no lugar do antigo bloco de JSONBIN SYNC -->
+<script>
 // ── JSONBIN SYNC ─────────────────────────────────────────────
 let JSONBIN_BIN_ID  = localStorage.getItem('gmt_bin_id')  || '';
 let JSONBIN_API_KEY = localStorage.getItem('gmt_api_key') || '';
 let syncEnabled = !!(JSONBIN_BIN_ID && JSONBIN_API_KEY);
-const SYNC_INTERVAL = 30000;
-let lastSyncHash = '', isSyncing = false, syncTimer = null;
 
-function hashDB(data){ return data.length + '_' + (data[0]?.id||'x'); }
+const SYNC_INTERVAL = 45000; // 45 segundos
+let lastSyncHash = '';
+let isSyncing = false;
+let syncTimer = null;
 
-function serC(c){
-  return {...c,
-    anivDate: c.anivDate instanceof Date ? c.anivDate.toISOString().slice(0,10) : (c.anivDate||null),
-    vencDate: c.vencDate instanceof Date ? c.vencDate.toISOString().slice(0,10) : (c.vencDate||null),
+function hashDB(data) {
+  return data.length + '_' + (data[0]?.id || 'empty');
+}
+
+function serC(c) {
+  return {
+    ...c,
+    anivDate: c.anivDate instanceof Date ? c.anivDate.toISOString().slice(0,10) : (c.anivDate || null),
+    vencDate: c.vencDate instanceof Date ? c.vencDate.toISOString().slice(0,10) : (c.vencDate || null),
   };
 }
-function deserC(c){
-  return {...c, anivDate:parseDate(c.anivDate), vencDate:parseDate(c.vencDate)};
+
+function deserC(c) {
+  return {
+    ...c,
+    anivDate: parseDate(c.anivDate),
+    vencDate: parseDate(c.vencDate)
+  };
 }
 
-async function pushToBin(){
-  if(!syncEnabled||isSyncing) return;
-  const h=hashDB(db);
-  if(h===lastSyncHash) return;
-  isSyncing=true; setSyncStatus('syncing');
-  try{
-    const r=await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`,{
-      method:'PUT',
-      headers:{'Content-Type':'application/json','X-Master-Key':JSONBIN_API_KEY,'X-Bin-Versioning':'false'},
-      body:JSON.stringify({contracts:db.map(serC)})
+// ====================== PUSH (Enviar) ======================
+async function pushToBin() {
+  if (!syncEnabled || isSyncing) return;
+  
+  const currentHash = hashDB(db);
+  if (currentHash === lastSyncHash) return;
+
+  isSyncing = true;
+  setSyncStatus('syncing');
+
+  try {
+    const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': JSONBIN_API_KEY,
+        'X-Bin-Versioning': 'false'
+      },
+      body: JSON.stringify({ contracts: db.map(serC) })
     });
-    if(r.ok){lastSyncHash=h; setSyncStatus('ok');}
-    else setSyncStatus('err');
-  }catch(e){setSyncStatus('err');}
-  isSyncing=false;
+
+    const data = await response.json();
+
+    if (response.ok) {
+      lastSyncHash = currentHash;
+      setSyncStatus('ok');
+      console.log('✅ Push realizado com sucesso:', data);
+    } else {
+      console.error('❌ Push falhou:', response.status, data);
+      setSyncStatus('err');
+      showToast(`Erro ao enviar: ${response.status} - ${data.message || 'Verifique as chaves'}`, 'err');
+    }
+  } catch (e) {
+    console.error('❌ Erro de rede no Push:', e);
+    setSyncStatus('err');
+    showToast('Erro de conexão ao enviar dados', 'err');
+  } finally {
+    isSyncing = false;
+  }
 }
 
-async function pullFromBin(){
-  if(!syncEnabled||isSyncing) return;
-  isSyncing=true; setSyncStatus('syncing');
-  try{
-    const r=await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`,{
-      headers:{'X-Master-Key':JSONBIN_API_KEY}
+// ====================== PULL (Receber) ======================
+async function pullFromBin() {
+  if (!syncEnabled || isSyncing) return;
+
+  isSyncing = true;
+  setSyncStatus('syncing');
+
+  try {
+    const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+      headers: {
+        'X-Master-Key': JSONBIN_API_KEY
+      }
     });
-    if(r.ok){
-      const j=await r.json();
-      const remote=(j.record?.contracts||[]).map(deserC);
-      if(remote.length>0||j.record?.contracts?.length===0){
-        db=remote;
-        localStorage.setItem('cd3',JSON.stringify(db.map(serC)));
-        renderAll(); lastSyncHash=hashDB(db); setSyncStatus('ok');
-      } else setSyncStatus('ok');
-    } else setSyncStatus('err');
-  }catch(e){setSyncStatus('err');}
-  isSyncing=false;
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('❌ Pull falhou:', response.status, errorData);
+      setSyncStatus('err');
+      showToast(`Erro ao buscar dados: ${response.status}`, 'err');
+      return;
+    }
+
+    const result = await response.json();
+    const remoteContracts = result.record?.contracts || [];
+
+    if (remoteContracts.length >= 0) {
+      db = remoteContracts.map(deserC);
+      localStorage.setItem('cd3', JSON.stringify(db.map(serC)));
+      
+      lastSyncHash = hashDB(db);
+      renderAll();
+      setSyncStatus('ok');
+      console.log(`✅ Pull realizado com sucesso: ${db.length} contratos`);
+    }
+  } catch (e) {
+    console.error('❌ Erro de rede no Pull:', e);
+    setSyncStatus('err');
+    showToast('Erro de conexão ao buscar dados', 'err');
+  } finally {
+    isSyncing = false;
+  }
 }
 
-function setSyncStatus(st){
-  const el=document.getElementById('sync-status'); if(!el) return;
-  const m={
-    off: {ico:'🔴',txt:'Sync off'},
-    ok:  {ico:'🟢',txt:'Sincronizado'},
-    syncing:{ico:'🔄',txt:'Sincronizando…'},
-    err: {ico:'🟡',txt:'Erro de sync'}
-  }[st]||{ico:'🔴',txt:'Sync off'};
-  el.innerHTML=`<span class="sync-ico">${m.ico}</span><span>${m.txt}</span>`;
-  el.className='sync-pill'+(st==='syncing'?' syncing':st==='ok'?' ok':st==='err'?' err':'');
+// ====================== STATUS ======================
+function setSyncStatus(st) {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+
+  const statusMap = {
+    off:     { ico: '🔴', txt: 'Sync off' },
+    ok:      { ico: '🟢', txt: 'Sincronizado' },
+    syncing: { ico: '🔄', txt: 'Sincronizando...' },
+    err:     { ico: '🟡', txt: 'Erro de sync' }
+  };
+
+  const m = statusMap[st] || statusMap.off;
+  el.innerHTML = `<span class="sync-ico">${m.ico}</span><span>${m.txt}</span>`;
+  el.className = `sync-pill ${st}`;
 }
 
-function startSync(){
-  if(!syncEnabled){setSyncStatus('off');return;}
-  pullFromBin();
-  if(syncTimer) clearInterval(syncTimer);
-  syncTimer=setInterval(pullFromBin,SYNC_INTERVAL);
+// ====================== INICIALIZAÇÃO ======================
+function startSync() {
+  if (!syncEnabled) {
+    setSyncStatus('off');
+    return;
+  }
+
+  console.log('🔄 Iniciando sincronização com JSONBin...');
+  pullFromBin();                    // primeira carga
+  if (syncTimer) clearInterval(syncTimer);
+  syncTimer = setInterval(pullFromBin, SYNC_INTERVAL);
 }
 
-function saveSyncConfig(){
-  const bid=document.getElementById('sync-bin-id').value.trim();
-  const key=document.getElementById('sync-api-key').value.trim();
-  if(!bid||!key){showToast('Preencha o BIN ID e a API Key.','err');return;}
-  JSONBIN_BIN_ID=bid; JSONBIN_API_KEY=key; syncEnabled=true;
-  localStorage.setItem('gmt_bin_id',bid); localStorage.setItem('gmt_api_key',key);
-  closeOv('ov-sync'); startSync();
-  showToast('Sync configurado! Conectando…','ok');
+function saveSyncConfig() {
+  const bid = document.getElementById('sync-bin-id').value.trim();
+  const key = document.getElementById('sync-api-key').value.trim();
+
+  if (!bid || !key) {
+    showToast('Preencha BIN ID e API Key', 'err');
+    return;
+  }
+
+  JSONBIN_BIN_ID = bid;
+  JSONBIN_API_KEY = key;
+  syncEnabled = true;
+
+  localStorage.setItem('gmt_bin_id', bid);
+  localStorage.setItem('gmt_api_key', key);
+
+  closeOv('ov-sync');
+  startSync();
+  showToast('✅ Sync configurado e ativado!', 'ok');
 }
 
-function clearSyncConfig(){
-  JSONBIN_BIN_ID=''; JSONBIN_API_KEY=''; syncEnabled=false;
-  localStorage.removeItem('gmt_bin_id'); localStorage.removeItem('gmt_api_key');
-  if(syncTimer) clearInterval(syncTimer);
-  closeOv('ov-sync'); setSyncStatus('off');
-  showToast('Sync desativado.','ok');
+function clearSyncConfig() {
+  JSONBIN_BIN_ID = '';
+  JSONBIN_API_KEY = '';
+  syncEnabled = false;
+
+  localStorage.removeItem('gmt_bin_id');
+  localStorage.removeItem('gmt_api_key');
+  if (syncTimer) clearInterval(syncTimer);
+
+  closeOv('ov-sync');
+  setSyncStatus('off');
+  showToast('Sync desativado', 'ok');
 }
 
-// PWA install
-let deferredPrompt=null;
-window.addEventListener('beforeinstallprompt',e=>{
-  e.preventDefault(); deferredPrompt=e;
-  document.getElementById('btn-install').style.display='inline-flex';
-});
-function installApp(){
-  if(!deferredPrompt) return;
-  deferredPrompt.prompt();
-  deferredPrompt.userChoice.then(()=>{deferredPrompt=null;document.getElementById('btn-install').style.display='none';});
-}
-window.addEventListener('appinstalled',()=>{document.getElementById('btn-install').style.display='none';});
-
-// Pre-fill sync modal if already configured
-window.addEventListener('DOMContentLoaded',()=>{
-  if(JSONBIN_BIN_ID) document.getElementById('sync-bin-id').value=JSONBIN_BIN_ID;
-  if(JSONBIN_API_KEY) document.getElementById('sync-api-key').value=JSONBIN_API_KEY;
-});
-
-
-// Override saveDB to serialize dates and push to sync
-const _origSaveDB = saveDB;
-saveDB = function(){
+// Sobrescrevendo saveDB para fazer push automático
+const originalSaveDB = saveDB;
+saveDB = function() {
   localStorage.setItem('cd3', JSON.stringify(db.map(serC)));
-  if(syncEnabled) setTimeout(pushToBin, 600);
+  if (syncEnabled) {
+    setTimeout(pushToBin, 800); // pequeno delay para evitar conflitos
+  }
 };
+
+// Preenche os campos no modal se já estiver configurado
+window.addEventListener('DOMContentLoaded', () => {
+  if (JSONBIN_BIN_ID) document.getElementById('sync-bin-id').value = JSONBIN_BIN_ID;
+  if (JSONBIN_API_KEY) document.getElementById('sync-api-key').value = JSONBIN_API_KEY;
+});
 
 
 // ── SELECTION & BULK DELETE ───────────────────────────────────
