@@ -1127,8 +1127,14 @@ header{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,e
       </div>
       <!-- Work Log -->
       <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
-        <div class="fg"><label class="flabel">Work Log — nova entrada</label><textarea class="finput" id="ose-worklog-new" rows="3" placeholder="Descreva a atualização..."></textarea></div>
-        <div class="fg"><label class="flabel">Histórico</label><textarea class="finput" id="ose-worklog-hist" rows="3" readonly style="opacity:.7;resize:none"></textarea></div>
+        <div class="fg"><label class="flabel">Work Log — nova entrada</label><textarea class="finput" id="ose-worklog-new" rows="4" placeholder="Descreva a atualização..."></textarea></div>
+        <div class="fg">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <label class="flabel" style="margin:0">Histórico</label>
+            <button class="btn btn-ghost" style="padding:3px 10px;font-size:11px" onclick="openOSHistorico()">Ver completo ↗</button>
+          </div>
+          <div id="ose-worklog-preview" onclick="openOSHistorico()" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;color:var(--text2);min-height:80px;max-height:110px;overflow:hidden;cursor:pointer;white-space:pre-wrap;font-family:'DM Mono',monospace;line-height:1.5"></div>
+        </div>
       </div>
       <!-- Valores -->
       <div class="os-form-grid" style="margin-top:14px">
@@ -1140,7 +1146,25 @@ header{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,e
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeOv('ov-os-edit')">Cancelar</button>
+      <button class="btn btn-ghost" onclick="openOSHistorico()" style="margin-right:auto">📋 Histórico</button>
+      <button class="btn btn-ghost" onclick="imprimirOS()">🖨️ Imprimir</button>
       <button class="btn btn-primary" onclick="saveOSEdit()">Salvar OS</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL OS — HISTÓRICO -->
+<div class="overlay" id="ov-os-hist">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-head">
+      <div><div class="modal-title" id="osh-title">Work Log</div><div class="modal-sub" id="osh-sub"></div></div>
+      <button class="mclose" onclick="closeOv('ov-os-hist')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div id="osh-content" style="white-space:pre-wrap;font-family:'DM Mono',monospace;font-size:12px;line-height:1.7;color:var(--text);padding:20px;max-height:65vh;overflow-y:auto"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeOv('ov-os-hist')">Fechar</button>
     </div>
   </div>
 </div>
@@ -1755,11 +1779,23 @@ function openOSCreate(){
   osPopulateSelects('osc');
   openOv('ov-os-create');
 }
+function osFormatTS(){
+  const n=new Date();
+  const p=v=>String(v).padStart(2,'0');
+  return `${p(n.getDate())}-${p(n.getMonth()+1)}-${n.getFullYear()} ${p(n.getHours())}:${p(n.getMinutes())}:${p(n.getSeconds())}`;
+}
+function osLogEntry(texto){
+  const ts=osFormatTS();
+  const user=currentUser?.login||currentUser?.nome||'sistema';
+  return `${ts} ${user}\n${texto}`;
+}
 async function saveOSCreate(){
   const client=document.getElementById('osc-client').value.trim();
   if(!client){showToast('Selecione um cliente.','err');return;}
   const num=osNextNum();
-  const now=new Date().toISOString();
+  const desc=document.getElementById('osc-desc').value.trim();
+  // Entrada inicial no worklog com descrição do serviço
+  const entradaInicial=osLogEntry(`OS aberta.\nServiço solicitado: ${desc||'(não informado)'}`);
   const obj={
     num, client,
     solicitante:document.getElementById('osc-solicitante').value.trim(),
@@ -1773,11 +1809,11 @@ async function saveOSCreate(){
     categoria:document.getElementById('osc-categoria').value,
     prioridade:document.getElementById('osc-prioridade').value,
     tecnico:document.getElementById('osc-tecnico').value,
-    desc:document.getElementById('osc-desc').value.trim(),
+    desc,
     status:'Aberta',
-    abertura:now,
+    abertura:new Date().toISOString(),
     abertoPor:currentUser?.nome||currentUser?.login||'',
-    workLog:'',
+    workLog:entradaInicial,
     inicio:'', fim:'',
     valMaterial:'', valMdo:'', valExterno:'',
   };
@@ -1817,7 +1853,8 @@ function openOSEdit(id){
   document.getElementById('ose-tecnico').value=r.tecnico||'';
   document.getElementById('ose-centroCusto').value=r.centroCusto||'';
   document.getElementById('ose-worklog-new').value='';
-  document.getElementById('ose-worklog-hist').value=r.workLog||'';
+  const prevEl=document.getElementById('ose-worklog-preview');
+  if(prevEl)prevEl.textContent=r.workLog||'(sem registros)';
   document.getElementById('ose-valMaterial').value=r.valMaterial||'';
   document.getElementById('ose-valMdo').value=r.valMdo||'';
   document.getElementById('ose-valExterno').value=r.valExterno||'';
@@ -1834,13 +1871,12 @@ function calcOSTotal(){
 async function saveOSEdit(){
   const r=extraDB.os.find(x=>x.id===osEditId);
   if(!r)return;
-  // Acumula worklog
+  // Acumula worklog com timestamp + login
   const novaEntrada=document.getElementById('ose-worklog-new').value.trim();
   let wl=r.workLog||'';
   if(novaEntrada){
-    const ts=new Date().toLocaleString('pt-BR');
-    const user=currentUser?.nome||currentUser?.login||'';
-    wl=`${ts} ${user}\n${novaEntrada}\n${wl?'---\n'+wl:''}`;
+    const entrada=osLogEntry(novaEntrada);
+    wl=wl?`${entrada}\n---\n${wl}`:entrada;
   }
   const obj={
     modelo:document.getElementById('ose-modelo').value.trim(),
@@ -1865,7 +1901,159 @@ async function saveOSEdit(){
     renderExtra('os');
     closeOv('ov-os-edit');
     showToast('OS atualizada!','ok');
+    // Atualiza preview sem fechar
+    const prevEl=document.getElementById('ose-worklog-preview');
+    if(prevEl)prevEl.textContent=obj.workLog||'(sem registros)';
+    document.getElementById('ose-worklog-new').value='';
   }catch(e){showToast('Erro ao salvar OS: '+e.message,'err');}
+}
+function openOSHistorico(){
+  const r=extraDB.os.find(x=>x.id===osEditId);
+  if(!r)return;
+  document.getElementById('osh-title').textContent=`Work Log — OS ${r.num||''}`;
+  document.getElementById('osh-sub').textContent=r.client||'';
+  document.getElementById('osh-content').textContent=r.workLog||'(sem registros)';
+  openOv('ov-os-hist');
+}
+
+function imprimirOS(){
+  const r=extraDB.os.find(x=>x.id===osEditId);
+  if(!r)return;
+  // Busca dados do cliente na lista
+  const cli=extraDB.cli.find(c=>(c.nome||'').toLowerCase()===( r.client||'').toLowerCase())||{};
+  const agora=new Date();
+  const emitido=agora.toLocaleDateString('pt-BR')+' '+agora.toLocaleTimeString('pt-BR');
+  const ab=r.abertura?new Date(r.abertura).toLocaleString('pt-BR'):'—';
+  const valMat=parseFloat(r.valMaterial)||0;
+  const valMdo=parseFloat(r.valMdo)||0;
+  const valExt=parseFloat(r.valExterno)||0;
+  const valTot=valMat+valMdo+valExt;
+  const fmt=v=>'R$ '+v.toFixed(2).replace('.',',');
+
+  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>OS ${r.num||''}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:Arial,sans-serif;font-size:12px;color:#000;background:#fff;padding:20px;}
+  @page{size:A4;margin:15mm;}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:10px;border-bottom:2px solid #000;margin-bottom:14px;}
+  .header-left{font-size:11px;line-height:1.7;}
+  .header-left strong{font-size:14px;display:block;margin-bottom:4px;}
+  .header-right{text-align:right;}
+  .header-right .os-label{font-size:14px;font-weight:700;}
+  .header-right .os-num{font-size:38px;font-weight:900;color:#cc0000;line-height:1;}
+  .section{display:flex;gap:30px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #aaa;}
+  .section-block{flex:1;}
+  .section-title{font-size:12px;font-weight:700;text-transform:uppercase;margin-bottom:8px;}
+  .info-row{margin-bottom:4px;font-size:11px;}
+  .info-row span{font-weight:700;}
+  .full-section{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #aaa;}
+  .full-section .center-title{text-align:center;font-weight:700;text-transform:uppercase;font-size:13px;margin-bottom:10px;}
+  .desc-box{font-size:11px;line-height:1.7;min-height:80px;white-space:pre-wrap;}
+  .mat-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;}
+  .mat-table th{text-align:left;font-weight:700;padding:3px 6px;border-bottom:1px solid #000;}
+  .mat-table td{padding:3px 6px;}
+  .mat-table .val{text-align:right;}
+  .worklog-box{font-size:11px;line-height:1.8;white-space:pre-wrap;min-height:60px;}
+  .footer-sigs{display:flex;align-items:flex-end;justify-content:space-between;margin-top:40px;gap:20px;}
+  .sig-block{text-align:center;flex:1;}
+  .sig-line{border-top:1px solid #000;padding-top:5px;font-size:11px;}
+  .val-total{text-align:right;font-size:12px;font-weight:700;}
+  .avaliacao{margin-top:18px;font-size:11px;}
+  .avaliacao label{margin-right:18px;}
+  .comentario{margin-top:10px;font-size:11px;border-bottom:1px dotted #000;padding-bottom:2px;}
+  .rodape{display:flex;justify-content:space-between;margin-top:24px;padding-top:10px;border-top:2px dotted #000;font-size:11px;font-weight:700;}
+</style></head><body>
+
+<!-- CABEÇALHO -->
+<div class="header">
+  <div class="header-left">
+    <strong>SICOM - GAMATEL</strong>
+    Rua Santa Rita de Cássia, 390 - Bairro de Lourdes - Vitória - ES<br>
+    Fone/Fax: (027) 4009-4399 - E-mail: gamatel@gamatel.com.br
+  </div>
+  <div class="header-right">
+    <div class="os-label">Ordem de Serviço</div>
+    <div class="os-num">${r.num||'—'}</div>
+  </div>
+</div>
+
+<!-- INFORMAÇÕES CLIENTE + OS -->
+<div class="section">
+  <div class="section-block">
+    <div class="section-title">Informações do Cliente</div>
+    <div class="info-row"><span>CLIENTE : </span>${r.client||'—'}</div>
+    <div class="info-row"><span>CNPJ : </span>${cli.doc||''}</div>
+    <div class="info-row"><span>ENDEREÇO : </span>${cli.obs||''}</div>
+    <div class="info-row"><span>CIDADE/ESTADO : </span>${cli.cidade||''}</div>
+    <div class="info-row"><span>TELEFONE : </span>${cli.tel||r.tel||''}</div>
+    <div class="info-row"><span>SOLICITANTE : </span>${r.solicitante||''}</div>
+  </div>
+  <div class="section-block">
+    <div class="section-title">Informações da O.S.</div>
+    <div class="info-row"><span>CATEGORIA : </span>${r.categoria||'—'}</div>
+    <div class="info-row"><span>STATUS : </span>${r.status||'—'}</div>
+    <div class="info-row"><span>PRIORIDADE : </span>${r.prioridade||'—'}</div>
+    <div class="info-row"><span>SÉRIE : </span>${r.ativo||''}</div>
+    <div class="info-row"><span>MODELO : </span>${r.modelo||''}</div>
+    <div class="info-row"><span>TÉCNICO : </span>${r.tecnico||'—'}</div>
+    <div class="info-row"><span>DATA ABERTURA : </span>${ab}</div>
+  </div>
+</div>
+
+<!-- SOLICITAÇÃO DO CLIENTE -->
+<div class="full-section">
+  <div class="center-title">Solicitação do Cliente</div>
+  <div class="desc-box">${r.desc||''}</div>
+</div>
+
+<!-- MATERIAL / MÃO DE OBRA -->
+<div class="full-section">
+  <div class="center-title">Material / Mão de Obra</div>
+  <table class="mat-table">
+    <thead><tr><th>Item</th><th>Descrição</th><th>Valor Unit.</th><th>Qtde</th><th class="val">Valor Total</th></tr></thead>
+    <tbody>
+      <tr><td colspan="4"><strong>Valor de Material</strong></td><td class="val">${fmt(valMat)}</td></tr>
+      <tr><td colspan="4"><strong>Valor de Mão de Obra</strong></td><td class="val">${fmt(valMdo)}</td></tr>
+      ${valExt>0?`<tr><td colspan="4"><strong>Valor Suporte Externo</strong></td><td class="val">${fmt(valExt)}</td></tr>`:''}
+    </tbody>
+  </table>
+</div>
+
+<!-- SERVIÇO EXECUTADO -->
+<div class="full-section">
+  <div class="center-title">Serviço Executado</div>
+  <div class="worklog-box">${r.workLog||''}</div>
+</div>
+
+<!-- ASSINATURAS + AVALIAÇÃO -->
+<div class="footer-sigs">
+  <div class="sig-block">
+    <div class="sig-line">Técnico: ${r.tecnico||'___________________________'}</div>
+  </div>
+  <div class="sig-block">
+    <div class="sig-line">Assinatura do Cliente</div>
+  </div>
+  <div class="val-total">Valor Total<br>${fmt(valTot)}</div>
+</div>
+
+<div class="avaliacao">
+  Avaliação dos Serviços Prestados: &nbsp;
+  <label>○ Ótimo</label><label>○ Bom</label><label>○ Insatisfeito</label><label>○ Muito Insatisfeito</label>
+</div>
+<div class="comentario">Comentário:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+
+<div class="rodape">
+  <span>Emitido em: ${emitido}</span>
+  <span>www.gamatel.com.br</span>
+</div>
+
+<script>window.onload=()=>window.print();</script>
+</body></html>`;
+
+  const win=window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
 }
 function buildForm(fields,data){return fields.map(f=>{const v=esc(data[f.k]||'');if(f.t==='textarea')return`<div class="fg"><label class="fl">${f.l}${f.req?'<span class="req">*</span>':''}</label><textarea class="fi" id="ef-${f.k}" rows="3" placeholder="${f.ph||''}">${v}</textarea></div>`;if(f.t==='select')return`<div class="fg"><label class="fl">${f.l}</label><select class="fi" id="ef-${f.k}">${(f.opts||[]).map(o=>`<option value="${o}" ${data[f.k]===o?'selected':''}>${o}</option>`).join('')}</select></div>`;return`<div class="fg"><label class="fl">${f.l}${f.req?'<span class="req">*</span>':''}</label><input class="fi" id="ef-${f.k}" type="${f.t||'text'}" placeholder="${f.ph||''}" value="${v}"/></div>`;}).join('');}
 async function saveExtra(){const tab=extraCurrentTab;const cfg=EXTRA_CFG[tab];const obj={};let valid=true;cfg.fields.forEach(f=>{const el=document.getElementById('ef-'+f.k);if(!el)return;obj[f.k]=el.value.trim();if(f.req&&!obj[f.k]){el.style.borderColor='var(--danger)';valid=false;}else if(el)el.style.borderColor='';});if(!valid){showToast('Preencha os campos obrigatórios.','err');return;}try{if(extraEditId){await pbPatch(PB_COLS[tab],extraEditId,obj);const i=extraDB[tab].findIndex(x=>x.id===extraEditId);if(i>=0)extraDB[tab][i]={...extraDB[tab][i],...obj};}else{const r=await pbCreate(PB_COLS[tab],obj);extraDB[tab].push({id:r.id,...obj});}saveExtraDB(tab);renderExtra(tab);closeOv('ov-extra');showToast(extraEditId?'Registro atualizado.':'Registro adicionado.','ok');}catch(e){showToast('Erro ao salvar: '+e.message,'err');}}
