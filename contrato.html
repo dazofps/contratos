@@ -434,6 +434,15 @@ header{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,e
 .dash-alert-meta{font-size:11px;color:var(--text2)}
 .dash-empty{color:var(--text2);font-size:13px;padding:8px 0}
 
+/* ── OS MODALS ── */
+.os-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.os-form-grid .os-full{grid-column:1/-1}
+.os-readonly-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.os-ro-item{display:flex;flex-direction:column;gap:3px}
+.os-ro-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em}
+.os-ro-val{font-size:13px;color:var(--text);font-weight:500;word-break:break-all}
+@media(max-width:640px){.os-form-grid{grid-template-columns:1fr}.os-readonly-bar{grid-template-columns:1fr 1fr}}
+
 /* ── USER MANAGEMENT TABLE ── */
 .user-mgmt-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
 .users-table{width:100%;border-collapse:collapse}
@@ -981,6 +990,111 @@ header{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,e
   </div>
 </div>
 
+<!-- MODAL OS — CRIAR -->
+<div class="overlay" id="ov-os-create">
+  <div class="modal" style="max-width:780px">
+    <div class="modal-head">
+      <div><div class="modal-title">Nova Ordem de Serviço</div><div class="modal-sub" id="os-create-num"></div></div>
+      <button class="mclose" onclick="closeOv('ov-os-create')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="os-form-grid">
+        <div class="fg"><label class="flabel">Cliente *</label><select class="finput" id="osc-client"><option value="">Selecione um cliente</option></select></div>
+        <div class="fg"><label class="flabel">Solicitante</label><input class="finput" id="osc-solicitante" placeholder="Nome completo"/></div>
+        <div class="fg"><label class="flabel">E-mail</label><input class="finput" id="osc-email" placeholder="email@cliente.com"/></div>
+        <div class="fg"><label class="flabel">Telefone</label><input class="finput" id="osc-tel" placeholder="(00) 00000-0000"/></div>
+        <div class="fg"><label class="flabel">Contrato de Locação</label><input class="finput" id="osc-contrato" placeholder="GSL 0000.000/00"/></div>
+        <div class="fg"><label class="flabel">Centro de Custo</label><input class="finput" id="osc-centroCusto" placeholder=""/></div>
+        <div class="fg"><label class="flabel">Modelo</label><select class="finput" id="osc-modelo"><option value="">Selecione um modelo</option></select></div>
+        <div class="fg"><label class="flabel">Ativo / Asset (Série)</label><input class="finput" id="osc-ativo" placeholder="Série do equipamento"/></div>
+        <div class="fg"><label class="flabel">Chamado do Cliente</label><input class="finput" id="osc-chamado" placeholder="Nº do chamado"/></div>
+        <div class="fg"><label class="flabel">Categoria de Serviço</label><select class="finput" id="osc-categoria">
+          <option value="">Selecione</option>
+          <option>Programação de rádio</option>
+          <option>Instalação de rádio fixo/móvel</option>
+          <option>Instalação de rádio portátil</option>
+          <option>Manutenção corretiva</option>
+          <option>Manutenção preventiva</option>
+          <option>Reparo no local</option>
+          <option>Outros</option>
+        </select></div>
+        <div class="fg"><label class="flabel">Prioridade</label><select class="finput" id="osc-prioridade">
+          <option>Programada</option><option>Urgente</option><option>Emergencial</option>
+        </select></div>
+        <div class="fg"><label class="flabel">Atendimento feito por</label><select class="finput" id="osc-tecnico"><option value="">Selecione</option></select></div>
+        <div class="fg os-full"><label class="flabel">Serviço Solicitado</label><textarea class="finput" id="osc-desc" rows="4" placeholder="Descreva o serviço solicitado..."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeOv('ov-os-create')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveOSCreate()">Salvar OS</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL OS — EDITAR/VER -->
+<div class="overlay" id="ov-os-edit">
+  <div class="modal" style="max-width:860px">
+    <div class="modal-head">
+      <div><div class="modal-title" id="ose-title">OS Nº —</div><div class="modal-sub" id="ose-sub"></div></div>
+      <button class="mclose" onclick="closeOv('ov-os-edit')">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Campos bloqueados (só leitura) -->
+      <div class="os-readonly-bar">
+        <div class="os-ro-item"><span class="os-ro-label">Contato</span><span class="os-ro-val" id="ose-ro-solicitante">—</span></div>
+        <div class="os-ro-item"><span class="os-ro-label">Telefone</span><span class="os-ro-val" id="ose-ro-tel">—</span></div>
+        <div class="os-ro-item"><span class="os-ro-label">E-mail</span><span class="os-ro-val" id="ose-ro-email">—</span></div>
+        <div class="os-ro-item"><span class="os-ro-label">Contrato</span><span class="os-ro-val" id="ose-ro-contrato">—</span></div>
+      </div>
+      <!-- Campos editáveis -->
+      <div class="os-form-grid" style="margin-top:14px">
+        <div class="fg"><label class="flabel">Modelo</label><select class="finput" id="ose-modelo"><option value="">Selecione</option></select></div>
+        <div class="fg"><label class="flabel">Ativo / Asset (Série)</label><input class="finput" id="ose-ativo" placeholder="Série do equipamento"/></div>
+        <div class="fg"><label class="flabel">Início</label><input class="finput" id="ose-inicio" type="datetime-local"/></div>
+        <div class="fg"><label class="flabel">Fim</label><input class="finput" id="ose-fim" type="datetime-local"/></div>
+        <div class="fg"><label class="flabel">Chamado Externo</label><input class="finput" id="ose-chamado" placeholder=""/></div>
+        <div class="fg"><label class="flabel">Categoria</label><select class="finput" id="ose-categoria">
+          <option value="">Selecione</option>
+          <option>Programação de rádio</option>
+          <option>Instalação de rádio fixo/móvel</option>
+          <option>Instalação de rádio portátil</option>
+          <option>Manutenção corretiva</option>
+          <option>Manutenção preventiva</option>
+          <option>Reparo no local</option>
+          <option>Outros</option>
+        </select></div>
+        <div class="fg"><label class="flabel">Prioridade</label><select class="finput" id="ose-prioridade">
+          <option>Programada</option><option>Urgente</option><option>Emergencial</option>
+        </select></div>
+        <div class="fg"><label class="flabel">Status</label><select class="finput" id="ose-status">
+          <option>Aberta</option><option>Em andamento</option><option>Locado</option>
+          <option>Aguardando peça</option><option>Aguardando aprovação</option>
+          <option>Concluída</option><option>Cancelada</option>
+        </select></div>
+        <div class="fg"><label class="flabel">Técnico</label><select class="finput" id="ose-tecnico"><option value="">Selecione</option></select></div>
+        <div class="fg"><label class="flabel">Centro de Custo</label><input class="finput" id="ose-centroCusto" placeholder=""/></div>
+      </div>
+      <!-- Work Log -->
+      <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="fg"><label class="flabel">Work Log — nova entrada</label><textarea class="finput" id="ose-worklog-new" rows="3" placeholder="Descreva a atualização..."></textarea></div>
+        <div class="fg"><label class="flabel">Histórico</label><textarea class="finput" id="ose-worklog-hist" rows="3" readonly style="opacity:.7;resize:none"></textarea></div>
+      </div>
+      <!-- Valores -->
+      <div class="os-form-grid" style="margin-top:14px">
+        <div class="fg"><label class="flabel">Valor de Material (R$)</label><input class="finput" id="ose-valMaterial" type="number" step="0.01" placeholder="0,00" oninput="calcOSTotal()"/></div>
+        <div class="fg"><label class="flabel">Valor de M.D.O (R$)</label><input class="finput" id="ose-valMdo" type="number" step="0.01" placeholder="0,00" oninput="calcOSTotal()"/></div>
+        <div class="fg"><label class="flabel">Valor Suporte Externo (R$)</label><input class="finput" id="ose-valExterno" type="number" step="0.01" placeholder="0,00" oninput="calcOSTotal()"/></div>
+        <div class="fg"><label class="flabel">Valor Total (R$)</label><input class="finput" id="ose-valTotal" readonly style="font-weight:700;color:var(--blue2)"/></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeOv('ov-os-edit')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveOSEdit()">Salvar OS</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"><span class="t-ico" id="t-ico"></span><span id="t-msg"></span></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -1517,7 +1631,7 @@ loadExtraDB();
 
 const EXTRA_CFG={
   estoque:{title:'Estoque',fields:[{k:'codigo',l:'Código',t:'text',ph:'EQ-001',req:true},{k:'nome',l:'Produto / Descrição',t:'text',ph:'Nome do produto',req:true},{k:'cat',l:'Categoria',t:'text',ph:'Ex: Roteador, Cabo...'},{k:'qtd',l:'Quantidade',t:'number',ph:'0'},{k:'qtdMin',l:'Qtd. Mínima',t:'number',ph:'0'},{k:'local',l:'Localização',t:'text',ph:'Ex: Prateleira A3'},{k:'obs',l:'Observações',t:'textarea',ph:''}],cols:['codigo','nome','cat','qtd','qtdMin','local','obs'],badge:'be'},
-  os:{title:'Ordem de Serviço',fields:[{k:'num',l:'Nº O.S.',t:'text',ph:'OS-2025-001',req:true},{k:'client',l:'Cliente',t:'text',ph:'Nome do cliente',req:true},{k:'tecnico',l:'Técnico',t:'text',ph:'Responsável'},{k:'abertura',l:'Data Abertura',t:'date',ph:''},{k:'previsao',l:'Previsão Entrega',t:'date',ph:''},{k:'status',l:'Status',t:'select',opts:['Aberta','Em andamento','Aguardando peça','Concluída','Cancelada']},{k:'desc',l:'Descrição',t:'textarea',ph:'Descreva o problema...'}],cols:['num','client','tecnico','abertura','previsao','status','desc'],badge:'bos'},
+  os:{title:'Ordem de Serviço',fields:[{k:'num',l:'Nº O.S.',t:'text',ph:'',req:true},{k:'client',l:'Cliente',t:'text',ph:'',req:true},{k:'tecnico',l:'Técnico',t:'text',ph:''},{k:'categoria',l:'Categoria',t:'text',ph:''},{k:'prioridade',l:'Prioridade',t:'text',ph:''},{k:'status',l:'Status',t:'text',ph:''},{k:'abertura',l:'Abertura',t:'text',ph:''},{k:'solicitante',l:'Solicitante',t:'text',ph:''},{k:'email',l:'E-mail',t:'text',ph:''},{k:'tel',l:'Telefone',t:'text',ph:''},{k:'contrato',l:'Contrato',t:'text',ph:''},{k:'centroCusto',l:'Centro de Custo',t:'text',ph:''},{k:'modelo',l:'Modelo',t:'text',ph:''},{k:'ativo',l:'Ativo/Asset',t:'text',ph:''},{k:'chamado',l:'Chamado',t:'text',ph:''},{k:'desc',l:'Serviço Solicitado',t:'textarea',ph:''},{k:'inicio',l:'Início',t:'text',ph:''},{k:'fim',l:'Fim',t:'text',ph:''},{k:'workLog',l:'Work Log',t:'textarea',ph:''},{k:'valMaterial',l:'Val. Material',t:'text',ph:''},{k:'valMdo',l:'Val. M.D.O',t:'text',ph:''},{k:'valExterno',l:'Val. Externo',t:'text',ph:''},{k:'abertoPor',l:'Aberto por',t:'text',ph:''}],cols:['num','client','tecnico','categoria','status','prioridade'],badge:'bos'},
   forn:{title:'Fornecedor',fields:[{k:'nome',l:'Fornecedor',t:'text',ph:'Razão social',req:true},{k:'cnpj',l:'CNPJ',t:'text',ph:'00.000.000/0000-00'},{k:'contato',l:'Contato',t:'text',ph:'Nome do responsável'},{k:'tel',l:'Telefone',t:'text',ph:'(00) 00000-0000'},{k:'email',l:'E-mail',t:'text',ph:'email@fornecedor.com'},{k:'cat',l:'Categoria',t:'text',ph:'Ex: Equipamentos, Serviços...'},{k:'obs',l:'Observações',t:'textarea',ph:''}],cols:['nome','cnpj','contato','tel','email','cat','obs'],badge:'bf'},
   cli:{title:'Cliente',fields:[{k:'nome',l:'Cliente',t:'text',ph:'Razão social / Nome',req:true},{k:'doc',l:'CNPJ / CPF',t:'text',ph:'00.000.000/0000-00'},{k:'contato',l:'Contato',t:'text',ph:'Nome do responsável'},{k:'tel',l:'Telefone',t:'text',ph:'(00) 00000-0000'},{k:'email',l:'E-mail',t:'text',ph:'email@cliente.com'},{k:'cidade',l:'Cidade / UF',t:'text',ph:'Ex: São Paulo / SP'},{k:'obs',l:'Observações',t:'textarea',ph:''}],cols:['nome','doc','contato','tel','email','cidade','obs'],badge:'bc'},
 };
@@ -1547,8 +1661,160 @@ function renderOS(){renderExtra('os');}
 function renderForn(){renderExtra('forn');}
 function renderCli(){renderExtra('cli');}
 
-function openAddExtra(tab){extraEditId=null;extraCurrentTab=tab;const cfg=EXTRA_CFG[tab];document.getElementById('extra-modal-title').textContent='Adicionar '+cfg.title;document.getElementById('extra-modal-sub').textContent='';document.getElementById('extra-modal-body').innerHTML=buildForm(cfg.fields,{});openOv('ov-extra');}
-function openEditExtra(tab,id){extraCurrentTab=tab;extraEditId=id;const cfg=EXTRA_CFG[tab];const r=extraDB[tab].find(x=>x.id===id)||{};document.getElementById('extra-modal-title').textContent='Editar '+cfg.title;document.getElementById('extra-modal-sub').textContent=r[cfg.fields[0].k]||'';document.getElementById('extra-modal-body').innerHTML=buildForm(cfg.fields,r);openOv('ov-extra');}
+function openAddExtra(tab){
+  if(tab==='os'){openOSCreate();return;}
+  extraEditId=null;extraCurrentTab=tab;const cfg=EXTRA_CFG[tab];document.getElementById('extra-modal-title').textContent='Adicionar '+cfg.title;document.getElementById('extra-modal-sub').textContent='';document.getElementById('extra-modal-body').innerHTML=buildForm(cfg.fields,{});openOv('ov-extra');
+}
+function openEditExtra(tab,id){
+  if(tab==='os'){openOSEdit(id);return;}
+  extraCurrentTab=tab;extraEditId=id;const cfg=EXTRA_CFG[tab];const r=extraDB[tab].find(x=>x.id===id)||{};document.getElementById('extra-modal-title').textContent='Editar '+cfg.title;document.getElementById('extra-modal-sub').textContent=r[cfg.fields[0].k]||'';document.getElementById('extra-modal-body').innerHTML=buildForm(cfg.fields,r);openOv('ov-extra');
+}
+
+// ── OS — CRIAR ────────────────────────────────────────────────────────────────
+let osEditId=null;
+function osNextNum(){
+  const nums=extraDB.os.map(o=>parseInt((o.num||'0').replace(/\D/g,''))||0);
+  const max=nums.length?Math.max(...nums):0;
+  const y=new Date().getFullYear();
+  return `OS-${y}-${String(max+1).padStart(3,'0')}`;
+}
+function osPopulateSelects(prefix){
+  // Clientes
+  const sc=document.getElementById(prefix+'-client');
+  if(sc){const cur=sc.value;sc.innerHTML='<option value="">Selecione um cliente</option>';extraDB.cli.forEach(c=>sc.innerHTML+=`<option value="${esc(c.nome)}">${esc(c.nome)}</option>`);sc.value=cur;}
+  // Modelos (estoque)
+  const sm=document.getElementById(prefix+'-modelo');
+  if(sm){const cur=sm.value;sm.innerHTML='<option value="">Selecione um modelo</option>';extraDB.estoque.forEach(e=>sm.innerHTML+=`<option value="${esc(e.nome)}">${esc(e.nome)}${e.codigo?' ('+esc(e.codigo)+')':''}</option>`);sm.value=cur;}
+  // Técnicos (usuários)
+  const st=document.getElementById(prefix+'-tecnico');
+  if(st){const cur=st.value;st.innerHTML='<option value="">Selecione</option>';(usersDB||[]).forEach(u=>st.innerHTML+=`<option value="${esc(u.nome||u.login)}">${esc(u.nome||u.login)} (${u.cargo||''})</option>`);st.value=cur;}
+}
+function openOSCreate(){
+  document.getElementById('os-create-num').textContent='Número: '+osNextNum();
+  document.getElementById('osc-client').value='';
+  document.getElementById('osc-solicitante').value='';
+  document.getElementById('osc-email').value='';
+  document.getElementById('osc-tel').value='';
+  document.getElementById('osc-contrato').value='';
+  document.getElementById('osc-centroCusto').value='';
+  document.getElementById('osc-ativo').value='';
+  document.getElementById('osc-chamado').value='';
+  document.getElementById('osc-desc').value='';
+  osPopulateSelects('osc');
+  openOv('ov-os-create');
+}
+async function saveOSCreate(){
+  const client=document.getElementById('osc-client').value.trim();
+  if(!client){showToast('Selecione um cliente.','err');return;}
+  const num=osNextNum();
+  const now=new Date().toISOString();
+  const obj={
+    num, client,
+    solicitante:document.getElementById('osc-solicitante').value.trim(),
+    email:document.getElementById('osc-email').value.trim(),
+    tel:document.getElementById('osc-tel').value.trim(),
+    contrato:document.getElementById('osc-contrato').value.trim(),
+    centroCusto:document.getElementById('osc-centroCusto').value.trim(),
+    modelo:document.getElementById('osc-modelo').value.trim(),
+    ativo:document.getElementById('osc-ativo').value.trim(),
+    chamado:document.getElementById('osc-chamado').value.trim(),
+    categoria:document.getElementById('osc-categoria').value,
+    prioridade:document.getElementById('osc-prioridade').value,
+    tecnico:document.getElementById('osc-tecnico').value,
+    desc:document.getElementById('osc-desc').value.trim(),
+    status:'Aberta',
+    abertura:now,
+    abertoPor:currentUser?.nome||currentUser?.login||'',
+    workLog:'',
+    inicio:'', fim:'',
+    valMaterial:'', valMdo:'', valExterno:'',
+  };
+  try{
+    const r=await pbCreate(PB_COLS.os,obj);
+    extraDB.os.push({id:r.id,...obj});
+    saveExtraDB('os');
+    renderExtra('os');
+    closeOv('ov-os-create');
+    showToast(`OS ${num} criada!`,'ok');
+  }catch(e){showToast('Erro ao criar OS: '+e.message,'err');}
+}
+
+// ── OS — EDITAR ───────────────────────────────────────────────────────────────
+function openOSEdit(id){
+  osEditId=id;
+  const r=extraDB.os.find(x=>x.id===id);
+  if(!r)return;
+  document.getElementById('ose-title').textContent=`OS Nº ${r.num||'—'} — ${r.client||''}`;
+  const ab=r.abertura?new Date(r.abertura).toLocaleString('pt-BR'):'—';
+  document.getElementById('ose-sub').textContent=`Aberta por: ${r.abertoPor||'—'} · ${ab}`;
+  // Readonly
+  document.getElementById('ose-ro-solicitante').textContent=r.solicitante||'—';
+  document.getElementById('ose-ro-tel').textContent=r.tel||'—';
+  document.getElementById('ose-ro-email').textContent=r.email||'—';
+  document.getElementById('ose-ro-contrato').textContent=r.contrato||'—';
+  // Editáveis
+  osPopulateSelects('ose');
+  document.getElementById('ose-modelo').value=r.modelo||'';
+  document.getElementById('ose-ativo').value=r.ativo||'';
+  document.getElementById('ose-inicio').value=r.inicio||'';
+  document.getElementById('ose-fim').value=r.fim||'';
+  document.getElementById('ose-chamado').value=r.chamado||'';
+  document.getElementById('ose-categoria').value=r.categoria||'';
+  document.getElementById('ose-prioridade').value=r.prioridade||'Programada';
+  document.getElementById('ose-status').value=r.status||'Aberta';
+  document.getElementById('ose-tecnico').value=r.tecnico||'';
+  document.getElementById('ose-centroCusto').value=r.centroCusto||'';
+  document.getElementById('ose-worklog-new').value='';
+  document.getElementById('ose-worklog-hist').value=r.workLog||'';
+  document.getElementById('ose-valMaterial').value=r.valMaterial||'';
+  document.getElementById('ose-valMdo').value=r.valMdo||'';
+  document.getElementById('ose-valExterno').value=r.valExterno||'';
+  calcOSTotal();
+  openOv('ov-os-edit');
+}
+function calcOSTotal(){
+  const m=parseFloat(document.getElementById('ose-valMaterial')?.value)||0;
+  const d=parseFloat(document.getElementById('ose-valMdo')?.value)||0;
+  const e=parseFloat(document.getElementById('ose-valExterno')?.value)||0;
+  const el=document.getElementById('ose-valTotal');
+  if(el)el.value='R$ '+(m+d+e).toFixed(2).replace('.',',');
+}
+async function saveOSEdit(){
+  const r=extraDB.os.find(x=>x.id===osEditId);
+  if(!r)return;
+  // Acumula worklog
+  const novaEntrada=document.getElementById('ose-worklog-new').value.trim();
+  let wl=r.workLog||'';
+  if(novaEntrada){
+    const ts=new Date().toLocaleString('pt-BR');
+    const user=currentUser?.nome||currentUser?.login||'';
+    wl=`${ts} ${user}\n${novaEntrada}\n${wl?'---\n'+wl:''}`;
+  }
+  const obj={
+    modelo:document.getElementById('ose-modelo').value.trim(),
+    ativo:document.getElementById('ose-ativo').value.trim(),
+    inicio:document.getElementById('ose-inicio').value,
+    fim:document.getElementById('ose-fim').value,
+    chamado:document.getElementById('ose-chamado').value.trim(),
+    categoria:document.getElementById('ose-categoria').value,
+    prioridade:document.getElementById('ose-prioridade').value,
+    status:document.getElementById('ose-status').value,
+    tecnico:document.getElementById('ose-tecnico').value,
+    centroCusto:document.getElementById('ose-centroCusto').value.trim(),
+    workLog:wl,
+    valMaterial:document.getElementById('ose-valMaterial').value||'',
+    valMdo:document.getElementById('ose-valMdo').value||'',
+    valExterno:document.getElementById('ose-valExterno').value||'',
+  };
+  try{
+    await pbReq(`/api/collections/${PB_COLS.os}/records/${osEditId}`,{method:'PATCH',body:JSON.stringify(obj)});
+    Object.assign(r,obj);
+    saveExtraDB('os');
+    renderExtra('os');
+    closeOv('ov-os-edit');
+    showToast('OS atualizada!','ok');
+  }catch(e){showToast('Erro ao salvar OS: '+e.message,'err');}
+}
 function buildForm(fields,data){return fields.map(f=>{const v=esc(data[f.k]||'');if(f.t==='textarea')return`<div class="fg"><label class="fl">${f.l}${f.req?'<span class="req">*</span>':''}</label><textarea class="fi" id="ef-${f.k}" rows="3" placeholder="${f.ph||''}">${v}</textarea></div>`;if(f.t==='select')return`<div class="fg"><label class="fl">${f.l}</label><select class="fi" id="ef-${f.k}">${(f.opts||[]).map(o=>`<option value="${o}" ${data[f.k]===o?'selected':''}>${o}</option>`).join('')}</select></div>`;return`<div class="fg"><label class="fl">${f.l}${f.req?'<span class="req">*</span>':''}</label><input class="fi" id="ef-${f.k}" type="${f.t||'text'}" placeholder="${f.ph||''}" value="${v}"/></div>`;}).join('');}
 async function saveExtra(){const tab=extraCurrentTab;const cfg=EXTRA_CFG[tab];const obj={};let valid=true;cfg.fields.forEach(f=>{const el=document.getElementById('ef-'+f.k);if(!el)return;obj[f.k]=el.value.trim();if(f.req&&!obj[f.k]){el.style.borderColor='var(--danger)';valid=false;}else if(el)el.style.borderColor='';});if(!valid){showToast('Preencha os campos obrigatórios.','err');return;}try{if(extraEditId){await pbPatch(PB_COLS[tab],extraEditId,obj);const i=extraDB[tab].findIndex(x=>x.id===extraEditId);if(i>=0)extraDB[tab][i]={...extraDB[tab][i],...obj};}else{const r=await pbCreate(PB_COLS[tab],obj);extraDB[tab].push({id:r.id,...obj});}saveExtraDB(tab);renderExtra(tab);closeOv('ov-extra');showToast(extraEditId?'Registro atualizado.':'Registro adicionado.','ok');}catch(e){showToast('Erro ao salvar: '+e.message,'err');}}
 async function delExtra(tab,id){if(!confirm('Excluir este registro?'))return;try{await pbDel(PB_COLS[tab],id);}catch(e){showToast('Erro ao excluir: '+e.message,'err');return;}extraDB[tab]=extraDB[tab].filter(x=>x.id!==id);selectedExtra[tab].delete(id);saveExtraDB(tab);renderExtra(tab);showToast('Registro excluído.','ok');}
