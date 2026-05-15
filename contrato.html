@@ -373,9 +373,68 @@ select.fi,select.finput{cursor:pointer}
 body{padding-bottom:env(safe-area-inset-bottom)}
 header{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,env(safe-area-inset-right))}
 .bottom-nav{padding-left:max(4px,env(safe-area-inset-left));padding-right:max(4px,env(safe-area-inset-right))}
+
+/* ── LOGIN ── */
+#login-overlay{
+  position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(135deg,#060e1e 0%,#0d1b3e 50%,#091428 100%);
+  display:flex;align-items:center;justify-content:center;
+}
+#login-overlay.hidden{display:none}
+.login-box{
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:40px 36px;width:100%;max-width:380px;
+  box-shadow:0 24px 64px rgba(0,0,0,.6);
+  display:flex;flex-direction:column;align-items:center;gap:0;
+}
+.login-logo{width:72px;height:72px;object-fit:contain;margin-bottom:12px}
+.login-title{font-size:22px;font-weight:700;color:var(--text);margin-bottom:2px}
+.login-sub{font-size:12px;color:var(--text2);margin-bottom:28px;letter-spacing:.04em}
+.login-box .form-group{width:100%;margin-bottom:14px}
+.login-box label{font-size:11px;font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);display:block;margin-bottom:5px}
+.login-box input{width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;transition:border-color .2s}
+.login-box input:focus{border-color:var(--blue2)}
+.login-btn{width:100%;margin-top:6px;padding:12px;font-size:14px;font-weight:600;background:linear-gradient(135deg,var(--blue),#1a45c8);color:#fff;border:none;border-radius:8px;cursor:pointer;transition:opacity .2s}
+.login-btn:hover{opacity:.88}
+.login-err{color:#f87171;font-size:12px;margin-top:8px;text-align:center;min-height:18px}
+
+/* ── USER CHIP (header) ── */
+.user-chip{display:flex;align-items:center;gap:7px;padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;cursor:default;font-size:12px;color:var(--text)}
+.user-chip .cargo-badge{font-size:9px;font-family:'DM Mono',monospace;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:10px;background:rgba(37,99,235,.18);color:var(--blue2);border:1px solid rgba(37,99,235,.25)}
+.user-chip.hidden{display:none}
+
+/* ── USER MANAGEMENT TABLE ── */
+.user-mgmt-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.users-table{width:100%;border-collapse:collapse}
+.users-table th{background:var(--surface2);color:var(--text2);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:10px 12px;text-align:left;border-bottom:1px solid var(--border)}
+.users-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text)}
+.users-table tr:hover td{background:var(--surface2)}
+.cargo-pill{display:inline-block;padding:2px 9px;border-radius:10px;font-size:10px;font-family:'DM Mono',monospace;font-weight:600;letter-spacing:.05em}
+.cargo-pill.gerente{background:rgba(139,92,246,.15);color:#a78bfa;border:1px solid rgba(139,92,246,.3)}
+.cargo-pill.administrativo{background:rgba(37,99,235,.15);color:var(--blue2);border:1px solid rgba(37,99,235,.25)}
+.cargo-pill.tecnico{background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.25)}
 </style>
 </head>
 <body>
+
+<!-- ── LOGIN OVERLAY ── -->
+<div id="login-overlay">
+  <div class="login-box">
+    <img class="login-logo" id="login-logo-img" alt="Gamatel"/>
+    <div class="login-title">Gamatel</div>
+    <div class="login-sub">GESTÃO DE CONTRATOS</div>
+    <div class="form-group">
+      <label for="login-user">Usuário</label>
+      <input type="text" id="login-user" placeholder="seu.login" autocomplete="username"/>
+    </div>
+    <div class="form-group">
+      <label for="login-pass">Senha</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <button class="login-btn" onclick="doLogin()">Entrar</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
 
 <header>
   <div class="brand">
@@ -407,6 +466,15 @@ header{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,e
     <button class="btn btn-primary desktop-only" onclick="openAdd()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Novo Contrato
+    </button>
+    <div class="user-chip hidden" id="user-chip">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      <span id="user-chip-nome">-</span>
+      <span class="cargo-badge" id="user-chip-cargo">-</span>
+    </div>
+    <button class="btn btn-ghost desktop-only hidden" id="btn-logout" onclick="doLogout()" title="Sair">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sair
     </button>
     <button class="hamburger" onclick="openDrawer()" aria-label="Menu">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -444,6 +512,10 @@ header{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,e
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
     Vencimento
     <span class="badge" id="bv">0</span>
+  </button>
+  <button class="tab hidden" id="tab-usuarios" onclick="switchTab('usuarios')">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>
+    Usuários
   </button>
 </div>
 
@@ -637,6 +709,32 @@ header{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,e
       </div>
     </div>
   </div>
+
+  <div class="tab-section" id="sec-usuarios">
+    <div class="user-mgmt-header">
+      <div>
+        <div style="font-size:18px;font-weight:700;color:var(--text)">Gerenciamento de Usuários</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">Crie, edite ou remova logins do sistema</div>
+      </div>
+      <button class="btn btn-primary" onclick="openAddUser()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Novo Usuário
+      </button>
+    </div>
+    <div class="table-card">
+      <div class="table-scroll">
+        <table class="users-table">
+          <thead><tr><th>Nome</th><th>Login</th><th>Cargo</th><th></th></tr></thead>
+          <tbody id="body-usuarios"></tbody>
+        </table>
+      </div>
+      <div id="empty-usuarios" class="empty" style="display:none">
+        <div class="empty-ico">👤</div>
+        <div class="empty-title">Nenhum usuário cadastrado</div>
+        <div class="empty-sub">Adicione o primeiro usuário acima.</div>
+      </div>
+    </div>
+  </div>
 </main>
 
 <nav class="bottom-nav" id="bottom-nav">
@@ -755,6 +853,34 @@ header{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,e
   </div>
 </div>
 
+<!-- MODAL USUÁRIO -->
+<div class="overlay" id="ov-user">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head">
+      <div><div class="modal-title" id="user-modal-title">Novo Usuário</div><div class="modal-sub">Preencha os dados do acesso</div></div>
+      <button class="mclose" onclick="closeOv('ov-user')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg"><label class="flabel">Nome</label><input class="finput" id="u-nome" placeholder="Nome completo"/></div>
+      <div class="fg"><label class="flabel">Login</label><input class="finput" id="u-login" placeholder="ex: joao.silva"/></div>
+      <div class="fg"><label class="flabel">Senha</label><input class="finput" type="password" id="u-senha" placeholder="mínimo 6 caracteres"/></div>
+      <div class="fg">
+        <label class="flabel">Cargo</label>
+        <select class="finput" id="u-cargo">
+          <option value="gerente">Gerente</option>
+          <option value="administrativo">Administrativo</option>
+          <option value="tecnico">Técnico</option>
+        </select>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:4px;display:none" id="u-senha-note">Deixe a senha em branco para manter a atual.</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeOv('ov-user')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveUser()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL EXTRA -->
 <div class="overlay" id="ov-extra">
   <div class="modal" style="max-width:520px">
@@ -843,6 +969,7 @@ function switchTab(t){
   const s=document.getElementById('sec-'+t);
   s.classList.add('active');void s.offsetWidth;
   if(['estoque','os','forn','cli'].includes(t))renderExtra(t);
+  if(t==='usuarios')loadUsuarios();
 }
 
 // ── SORT ─────────────────────────────────────────────────────────
@@ -1231,14 +1358,164 @@ function updateBulkBarExtra(tab){const vis=new Set([...document.querySelectorAll
 function clearSelectionExtra(tab){document.querySelectorAll(`#tbl-${tab} .row-cb`).forEach(cb=>{selectedExtra[tab].delete(cb.dataset.id);cb.checked=false;cb.closest('tr').classList.remove('selected');});const m=document.getElementById(`chk-all-${tab}`);if(m){m.checked=false;m.indeterminate=false;}updateBulkBarExtra(tab);}
 async function deleteSelectedExtra(tab){const vis=new Set([...document.querySelectorAll(`#tbl-${tab} .row-cb`)].map(cb=>cb.dataset.id));const toDel=[...selectedExtra[tab]].filter(id=>vis.has(id));if(!toDel.length)return;if(!confirm(`Excluir ${toDel.length} registro(s)?`))return;try{await Promise.all(toDel.map(id=>pbDel(PB_COLS[tab],id)));}catch(e){showToast('Erro ao excluir: '+e.message,'err');return;}toDel.forEach(id=>selectedExtra[tab].delete(id));extraDB[tab]=extraDB[tab].filter(r=>!toDel.includes(r.id));saveExtraDB(tab);renderExtra(tab);showToast(`${toDel.length} registro(s) excluído(s).`,'ok');}
 
+// ── AUTH / LOGIN ──────────────────────────────────────────────────────────────
+let currentUser=null;
+const CARGO_TABS={
+  gerente:        ['aniv','venc','cli','estoque','forn','os','usuarios'],
+  administrativo: ['aniv','venc','cli','estoque','forn','os'],
+  tecnico:        ['os','estoque']
+};
+
+function restoreSession(){
+  try{const s=sessionStorage.getItem('gmt_user');if(s){currentUser=JSON.parse(s);return true;}}catch(e){}
+  return false;
+}
+
+async function doLogin(){
+  const login=document.getElementById('login-user').value.trim();
+  const senha=document.getElementById('login-pass').value;
+  const errEl=document.getElementById('login-err');
+  errEl.textContent='';
+  if(!login||!senha){errEl.textContent='Preencha login e senha.';return;}
+  if(!PB_URL){errEl.textContent='PocketBase não configurado. Configure a URL no botão Sync.';return;}
+  try{
+    const filter=encodeURIComponent(`login="${login}"&&senha="${senha}"`);
+    const d=await pbReq(`/api/collections/usuarios/records?filter=${filter}&perPage=1`);
+    const u=d.items&&d.items[0];
+    if(!u){errEl.textContent='Login ou senha incorretos.';return;}
+    currentUser={id:u.id,nome:u.nome,login:u.login,cargo:u.cargo};
+    sessionStorage.setItem('gmt_user',JSON.stringify(currentUser));
+    document.getElementById('login-overlay').classList.add('hidden');
+    applyCargoRules();
+    startPBSync();
+  }catch(e){
+    errEl.textContent='Erro ao conectar: '+(e.message||'verifique a URL do PocketBase.');
+  }
+}
+
+function doLogout(){
+  currentUser=null;
+  sessionStorage.removeItem('gmt_user');
+  document.getElementById('login-overlay').classList.remove('hidden');
+  document.getElementById('login-pass').value='';
+  document.getElementById('login-err').textContent='';
+  document.getElementById('user-chip').classList.add('hidden');
+  document.getElementById('btn-logout').classList.add('hidden');
+  if(pbTimer)clearInterval(pbTimer);
+}
+
+function applyCargoRules(){
+  if(!currentUser)return;
+  const cargo=currentUser.cargo||'tecnico';
+  const allowed=CARGO_TABS[cargo]||CARGO_TABS.tecnico;
+  document.getElementById('user-chip').classList.remove('hidden');
+  document.getElementById('user-chip-nome').textContent=currentUser.nome||currentUser.login;
+  document.getElementById('user-chip-cargo').textContent=cargo;
+  document.getElementById('btn-logout').classList.remove('hidden');
+  const allTabs=['aniv','venc','cli','estoque','forn','os','usuarios'];
+  allTabs.forEach(t=>{
+    const el=document.getElementById('tab-'+t);
+    if(el)el.classList.toggle('hidden',!allowed.includes(t));
+    const bn=document.getElementById('bn-'+t);
+    if(bn)bn.classList.toggle('hidden',!allowed.includes(t));
+  });
+  switchTab(allowed[0]||'os');
+}
+
+// ── GERENCIAMENTO DE USUÁRIOS ─────────────────────────────────────────────────
+let editUserId=null;
+let usersDB=[];
+
+async function loadUsuarios(){
+  try{
+    usersDB=await pbList('usuarios');
+    renderUsuarios();
+  }catch(e){showToast('Erro ao carregar usuários: '+e.message,'err');}
+}
+
+function renderUsuarios(){
+  const tbody=document.getElementById('body-usuarios');
+  const empty=document.getElementById('empty-usuarios');
+  if(!usersDB.length){tbody.innerHTML='';empty.style.display='';return;}
+  empty.style.display='none';
+  tbody.innerHTML=usersDB.map(u=>`
+    <tr>
+      <td><strong>${esc(u.nome||'-')}</strong></td>
+      <td><code style="font-size:12px;color:var(--text2)">${esc(u.login||'-')}</code></td>
+      <td><span class="cargo-pill ${u.cargo||''}">${u.cargo||'-'}</span></td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="btn btn-ghost" style="padding:5px 10px;font-size:12px" onclick="openEditUser('${u.id}')">Editar</button>
+        <button class="btn" style="padding:5px 10px;font-size:12px;background:var(--danger-bg);color:var(--danger);border:1px solid rgba(239,68,68,.3)" onclick="deleteUser('${u.id}')">Excluir</button>
+      </td>
+    </tr>`).join('');
+}
+
+function openAddUser(){
+  editUserId=null;
+  document.getElementById('user-modal-title').textContent='Novo Usuário';
+  document.getElementById('u-nome').value='';
+  document.getElementById('u-login').value='';
+  document.getElementById('u-senha').value='';
+  document.getElementById('u-cargo').value='administrativo';
+  document.getElementById('u-senha-note').style.display='none';
+  openOv('ov-user');
+}
+
+function openEditUser(id){
+  const u=usersDB.find(x=>x.id===id);if(!u)return;
+  editUserId=id;
+  document.getElementById('user-modal-title').textContent='Editar Usuário';
+  document.getElementById('u-nome').value=u.nome||'';
+  document.getElementById('u-login').value=u.login||'';
+  document.getElementById('u-senha').value='';
+  document.getElementById('u-cargo').value=u.cargo||'administrativo';
+  document.getElementById('u-senha-note').style.display='block';
+  openOv('ov-user');
+}
+
+async function saveUser(){
+  const nome=document.getElementById('u-nome').value.trim();
+  const login=document.getElementById('u-login').value.trim();
+  const senha=document.getElementById('u-senha').value;
+  const cargo=document.getElementById('u-cargo').value;
+  if(!nome||!login){showToast('Preencha nome e login.','err');return;}
+  if(!editUserId&&!senha){showToast('Informe uma senha para o novo usuário.','err');return;}
+  const data={nome,login,cargo};if(senha)data.senha=senha;
+  try{
+    if(editUserId){await pbPatch('usuarios',editUserId,data);showToast('Usuário atualizado!','ok');}
+    else{await pbCreate('usuarios',data);showToast('Usuário criado!','ok');}
+    closeOv('ov-user');await loadUsuarios();
+  }catch(e){showToast('Erro: '+e.message,'err');}
+}
+
+async function deleteUser(id){
+  const u=usersDB.find(x=>x.id===id);
+  if(!confirm(`Excluir usuário "${u?.nome||id}"?`))return;
+  try{await pbDel('usuarios',id);showToast('Usuário excluído.','ok');await loadUsuarios();}
+  catch(e){showToast('Erro: '+e.message,'err');}
+}
+
 window.addEventListener('DOMContentLoaded',()=>{
   if(PB_URL)document.getElementById('pb-url').value=PB_URL;
   initLogo();
+  // Replica a logo no login
+  const li=document.getElementById('login-logo-img');
+  const saved=localStorage.getItem('cd3_logo_gamatel');
+  if(li)li.src=saved||GAMATEL_LOGO;
+  // Tecla Enter no login
+  ['login-user','login-pass'].forEach(id=>{
+    document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+  });
+  // Restaura sessão se existir
+  if(restoreSession()){
+    document.getElementById('login-overlay').classList.add('hidden');
+    applyCargoRules();
+    startPBSync();
+  }
 });
 
 renderAll();
 updateBadges();
-startPBSync();
 </script>
 </body>
 </html>
