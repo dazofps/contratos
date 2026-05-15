@@ -1237,6 +1237,7 @@ function onFSel(e){const f=e.target.files[0];if(f)procFile(f);e.target.value='';
 const COLS={
   client:['cliente','client','nome','razão social','razao social'],
   cnpj:['cnpj','cpf/cnpj','cpf','doc'],
+  doc:['doc','cnpj','cpf/cnpj','cpf'],
   contrato:['contrato','nº contrato','numero contrato','contract','num contrato'],
   aniv:['aniversario','aniversario/reajuste','aniv. reajuste','aniv reajuste','reajuste','aniv.'],
   venc:['vencimento','venc','expiry','data vencimento','data de vencimento'],
@@ -1252,13 +1253,16 @@ const COLS={
   tecnico:['tecnico'],
   abertura:['abertura','data abertura'],
   previsao:['previsao','previsão entrega'],
-  status:['status']
+  status:['status'],
+  codigo:['codigo','código','cod','ref','code'],
+  num:['num','numero','número','nº','n°','no os','os'],
+  desc:['desc','descricao','descrição','descr','detalhe','detalhes'],
 };
 
 function normStr(s){try{return String(s).normalize('NFD').replace(/[^\x00-\x7F]/g,'').toLowerCase().trim();}catch(e){return String(s).toLowerCase().trim();}}
 function findCol(row,key){const aliases=COLS[key];if(!aliases||!aliases.length)return '';const entries=Object.entries(row);for(const a of aliases){const na=normStr(a);const entry=entries.find(([k])=>normStr(k).includes(na));if(entry)return entry[1];}return '';}
 
-function procFile(file){const ext=file.name.split('.').pop().toLowerCase();const r=new FileReader();r.onload=e=>{try{let rows;if(ext==='csv'){const text=e.target.result;rows=parseCSV(text);}else{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});}importRows(rows);}catch(err){showToast('Erro ao ler arquivo: '+err.message,'err');}};if(ext==='csv')r.readAsText(file,'iso-8859-1');else r.readAsArrayBuffer(file);}
+function procFile(file){const ext=file.name.split('.').pop().toLowerCase();const r=new FileReader();r.onload=e=>{try{let rows;if(ext==='csv'){const bytes=new Uint8Array(e.target.result);let text;for(const enc of['windows-1252','iso-8859-1','utf-8']){try{text=new TextDecoder(enc,{fatal:true}).decode(bytes);break;}catch(e){text=null;}}if(!text)text=new TextDecoder('windows-1252',{fatal:false}).decode(bytes);rows=parseCSV(text);}else{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});}importRows(rows);}catch(err){showToast('Erro ao ler arquivo: '+err.message,'err');}};r.readAsArrayBuffer(file);}
 function parseCSV(text){const lines=text.split(/\r?\n/).filter(l=>l.trim());const sep=lines[0].includes(';')?';':',';const headers=lines[0].split(sep).map(h=>h.trim().toLowerCase());return lines.slice(1).map(line=>{const vals=line.split(sep);const o={};headers.forEach((h,i)=>o[h]=(vals[i]||'').trim());return o;});}
 
 async function importRows(rows){
@@ -1272,6 +1276,7 @@ async function importRows(rows){
       if(target==='contracts'){
         const client=String(findCol(row,'client')).trim();
         const contrato=String(findCol(row,'contrato')).trim();
+        if(!client&&!contrato)continue;
         if(client&&contrato&&db.find(c=>c.client===client&&c.contrato===contrato))continue;
         const obj={client,cnpj:String(findCol(row,'cnpj')).trim(),contrato,anivDate:toInput(parseDate(findCol(row,'aniv'))),vencDate:toInput(parseDate(findCol(row,'venc'))),obs:String(findCol(row,'obs')).trim()};
         const r=await pbCreate(PB_COLS.contracts,obj);
