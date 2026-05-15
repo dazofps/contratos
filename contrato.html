@@ -733,27 +733,23 @@ header{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,e
 <div class="overlay" id="ov-sync">
   <div class="modal" style="max-width:460px">
     <div class="modal-head">
-      <div><div class="modal-title">☁️ Banco Compartilhado</div><div class="modal-sub">Configure o JSONBin.io para sincronizar entre dispositivos.</div></div>
+      <div><div class="modal-title">🗄️ Banco Compartilhado</div><div class="modal-sub">Conecte ao PocketBase para sincronizar entre dispositivos.</div></div>
       <button class="mclose" onclick="closeOv('ov-sync')">✕</button>
     </div>
     <div class="modal-body">
       <div style="background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.25);border-radius:8px;padding:13px 15px;margin-bottom:15px;font-size:12px;line-height:1.7;color:var(--text2)">
-        <strong style="color:var(--blue2)">Como configurar (grátis):</strong><br>
-        1. Acesse <a href="https://jsonbin.io" target="_blank" style="color:var(--blue2)">jsonbin.io</a> → crie conta<br>
-        2. New Bin → cole <code style="color:var(--gold)">{"contracts":[]}</code> → salve<br>
-        3. Copie o <strong style="color:var(--text)">BIN ID</strong> da URL<br>
-        4. Em API Keys, crie uma Master Key<br>
-        5. Cole abaixo e salve
+        <strong style="color:var(--blue2)">Como conectar:</strong><br>
+        1. Suba o Docker: <code style="color:var(--gold)">docker compose up -d</code><br>
+        2. Cole a URL abaixo (use o IP local para acesso em rede)
       </div>
-      <div class="fg"><label class="flabel">BIN ID</label><input class="finput" id="sync-bin-id" placeholder="ex: 64abc123ef456789abc"/></div>
-      <div class="fg"><label class="flabel">API Key (Master Key)</label><input class="finput" id="sync-api-key" placeholder="ex: $2a$10$..." type="password"/></div>
-      <div style="font-size:11px;color:var(--text2);margin-top:6px">🔒 Chaves salvas apenas neste dispositivo (localStorage).</div>
+      <div class="fg"><label class="flabel">URL do PocketBase</label><input class="finput" id="pb-url" placeholder="ex: http://192.168.1.100:8090"/></div>
+      <div style="font-size:11px;color:var(--text2);margin-top:6px">🔒 URL salva apenas neste dispositivo.</div>
     </div>
     <div class="modal-foot" style="justify-content:space-between">
-      <button class="btn btn-ghost" onclick="clearSyncConfig()" style="color:var(--danger)">Desativar</button>
+      <button class="btn btn-ghost" onclick="clearPBConfig()" style="color:var(--danger)">Desconectar</button>
       <div style="display:flex;gap:8px">
         <button class="btn btn-ghost" onclick="closeOv('ov-sync')">Cancelar</button>
-        <button class="btn btn-primary" onclick="saveSyncConfig()">Salvar e Ativar</button>
+        <button class="btn btn-primary" onclick="savePBConfig()">Conectar</button>
       </div>
     </div>
   </div>
@@ -986,7 +982,7 @@ function toggleAllReaj(m){document.querySelectorAll('#tbl-reaj .row-cb').forEach
 function syncHeaderCheckbox(tab){const all=document.querySelectorAll(`#tbl-${tab} .row-cb`),chk=document.querySelectorAll(`#tbl-${tab} .row-cb:checked`),m=document.getElementById(`chk-all-${tab}`);if(!m)return;m.indeterminate=chk.length>0&&chk.length<all.length;m.checked=all.length>0&&chk.length===all.length;}
 function updateBulkBar(tab){const vis=new Set([...document.querySelectorAll(`#tbl-${tab} .row-cb`)].map(cb=>cb.dataset.id));const cnt=[...selectedIds].filter(id=>vis.has(id)).length;const bar=document.getElementById(`bulk-${tab}`);const cEl=document.getElementById(`bulk-${tab}-count`);if(bar)bar.classList.toggle('visible',cnt>0);if(cEl)cEl.textContent=cnt===1?'1 selecionado':`${cnt} selecionados`;}
 function clearSelection(tab){document.querySelectorAll(`#tbl-${tab} .row-cb`).forEach(cb=>{selectedIds.delete(cb.dataset.id);cb.checked=false;cb.closest('tr').classList.remove('selected');});const m=document.getElementById(`chk-all-${tab}`);if(m){m.checked=false;m.indeterminate=false;}updateBulkBar(tab);}
-function deleteSelected(tab){const vis=new Set([...document.querySelectorAll(`#tbl-${tab} .row-cb`)].map(cb=>cb.dataset.id));const toDel=[...selectedIds].filter(id=>vis.has(id));if(!toDel.length)return;if(!confirm(`Excluir ${toDel.length} contrato(s)?`))return;toDel.forEach(id=>selectedIds.delete(id));db=db.filter(c=>!toDel.includes(c.id));saveDB();renderAll();showToast(`${toDel.length} contrato(s) excluído(s).`,'ok');}
+async function deleteSelected(tab){const vis=new Set([...document.querySelectorAll(`#tbl-${tab} .row-cb`)].map(cb=>cb.dataset.id));const toDel=[...selectedIds].filter(id=>vis.has(id));if(!toDel.length)return;if(!confirm(`Excluir ${toDel.length} contrato(s)?`))return;try{await Promise.all(toDel.map(id=>pbDel(PB_COLS.contracts,id)));}catch(e){showToast('Erro ao excluir: '+e.message,'err');return;}toDel.forEach(id=>selectedIds.delete(id));db=db.filter(c=>!toDel.includes(c.id));saveDB();renderAll();showToast(`${toDel.length} contrato(s) excluído(s).`,'ok');}
 
 function openOv(id){document.getElementById(id).classList.add('open');}
 function closeOv(id){document.getElementById(id).classList.remove('open');}
@@ -1014,16 +1010,24 @@ function openEdit(id){
   document.getElementById('fobs').value=c.obs||'';
   openOv('ov-add');
 }
-function saveContract(){
+async function saveContract(){
   const client=document.getElementById('fc').value.trim();
   if(!client){showToast('Informe o nome do cliente.','err');return;}
-  const obj={client,cnpj:document.getElementById('fcnpj').value.trim(),contrato:document.getElementById('fnum').value.trim(),anivDate:parseDate(document.getElementById('faniv').value),vencDate:parseDate(document.getElementById('fvenc').value),obs:document.getElementById('fobs').value.trim()};
-  if(editId){const i=db.findIndex(x=>x.id===editId);if(i!==-1)db[i]={...db[i],...obj};}
-  else db.push({id:uid(),...obj});
-  saveDB();closeOv('ov-add');renderAll();
-  showToast(editId?'Contrato atualizado ✓':'Contrato adicionado ✓','ok');
+  const obj={client,cnpj:document.getElementById('fcnpj').value.trim(),contrato:document.getElementById('fnum').value.trim(),anivDate:toInput(parseDate(document.getElementById('faniv').value)),vencDate:toInput(parseDate(document.getElementById('fvenc').value)),obs:document.getElementById('fobs').value.trim()};
+  try{
+    if(editId){
+      await pbPatch(PB_COLS.contracts,editId,obj);
+      const i=db.findIndex(x=>x.id===editId);
+      if(i!==-1)db[i]={...db[i],client:obj.client,cnpj:obj.cnpj,contrato:obj.contrato,anivDate:parseDate(obj.anivDate),vencDate:parseDate(obj.vencDate),obs:obj.obs};
+    }else{
+      const r=await pbCreate(PB_COLS.contracts,obj);
+      db.push(pbToContract(r));
+    }
+    saveDB();closeOv('ov-add');renderAll();
+    showToast(editId?'Contrato atualizado ✓':'Contrato adicionado ✓','ok');
+  }catch(e){showToast('Erro ao salvar: '+e.message,'err');}
 }
-function delC(id){if(!confirm('Excluir este contrato?'))return;db=db.filter(c=>c.id!==id);saveDB();renderAll();showToast('Contrato excluído.','ok');}
+async function delC(id){if(!confirm('Excluir este contrato?'))return;try{await pbDel(PB_COLS.contracts,id);}catch(e){showToast('Erro ao excluir: '+e.message,'err');return;}db=db.filter(c=>c.id!==id);saveDB();renderAll();showToast('Contrato excluído.','ok');}
 
 // ── IMPORT ───────────────────────────────────────────────────────
 function openImport(){
@@ -1079,44 +1083,33 @@ function findCol(row,key){const aliases=COLS[key];if(!aliases||!aliases.length)r
 function procFile(file){const ext=file.name.split('.').pop().toLowerCase();const r=new FileReader();r.onload=e=>{try{let rows;if(ext==='csv')rows=parseCSV(e.target.result);else{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});}importRows(rows);}catch(err){showToast('Erro: '+err.message,'err');}};if(ext==='csv')r.readAsText(file,'UTF-8');else r.readAsArrayBuffer(file);}
 function parseCSV(text){const lines=text.split(/\r?\n/).filter(l=>l.trim());const sep=lines[0].includes(';')?';':',';const headers=lines[0].split(sep).map(h=>h.trim().toLowerCase());return lines.slice(1).map(line=>{const vals=line.split(sep);const o={};headers.forEach((h,i)=>o[h]=(vals[i]||'').trim());return o;});}
 
-function importRows(rows){
-  const target = document.getElementById('imp-target').value;
+async function importRows(rows){
+  const target=document.getElementById('imp-target').value;
   let added=0;
-  
-  rows.forEach(row=>{
-    // Ignora apenas linhas completamente vazias
-    const hasAnyData = Object.values(row).some(v => String(v).trim() !== '');
-    if(!hasAnyData) return;
-
-    if(target === 'contracts'){
-      const client=String(findCol(row,'client')).trim();
-      const contrato=String(findCol(row,'contrato')).trim();
-      // Evita duplicatas apenas quando ambos os campos estão preenchidos
-      if(client && contrato && db.find(c=>c.client===client&&c.contrato===contrato))return;
-      db.push({id:uid(),client,cnpj:String(findCol(row,'cnpj')).trim(),contrato,anivDate:parseDate(findCol(row,'aniv')),vencDate:parseDate(findCol(row,'venc')),obs:String(findCol(row,'obs')).trim()});
-      added++;
-    } else {
-      const tab = target === 'contracts' ? 'contracts' : target;
-      const cfg = EXTRA_CFG[tab];
-      if(!cfg) return;
-
-      const newItem = { id: uid() };
-      cfg.fields.forEach(f => {
-        // Mapeia a chave do formulário para a chave de busca de coluna
-        const lookupKey = (f.k === 'nome' || f.k === 'client') ? 'client' : f.k;
-        newItem[f.k] = String(findCol(row, lookupKey)).trim();
-      });
-
-      extraDB[tab].push(newItem);
-      saveExtraDB(tab);
-      added++;
-    }
-  });
-
-  if(target === 'contracts') saveDB();
-  closeOv('ov-imp');
-  renderAll();
-  if(['cli','estoque','forn','os'].includes(target)) renderExtra(target);
+  showToast('Importando...','ok');
+  for(const row of rows){
+    const hasAnyData=Object.values(row).some(v=>String(v).trim()!=='');
+    if(!hasAnyData)continue;
+    try{
+      if(target==='contracts'){
+        const client=String(findCol(row,'client')).trim();
+        const contrato=String(findCol(row,'contrato')).trim();
+        if(client&&contrato&&db.find(c=>c.client===client&&c.contrato===contrato))continue;
+        const obj={client,cnpj:String(findCol(row,'cnpj')).trim(),contrato,anivDate:toInput(parseDate(findCol(row,'aniv'))),vencDate:toInput(parseDate(findCol(row,'venc'))),obs:String(findCol(row,'obs')).trim()};
+        const r=await pbCreate(PB_COLS.contracts,obj);
+        db.push(pbToContract(r));added++;
+      }else{
+        const cfg=EXTRA_CFG[target];if(!cfg)continue;
+        const obj={};
+        cfg.fields.forEach(f=>{const lk=(f.k==='nome'||f.k==='client')?'client':f.k;obj[f.k]=String(findCol(row,lk)).trim();});
+        const r=await pbCreate(PB_COLS[target],obj);
+        extraDB[target].push({id:r.id,...obj});added++;
+      }
+    }catch(e){console.warn('Import row error:',e);}
+  }
+  if(target==='contracts')saveDB();else saveExtraDB(target);
+  closeOv('ov-imp');renderAll();
+  if(['cli','estoque','forn','os'].includes(target))renderExtra(target);
   showToast(`${added} registro(s) importado(s)!`,'ok');
 }
 
@@ -1136,25 +1129,55 @@ function initLogo(){const saved=localStorage.getItem('cd3_logo_gamatel');const s
 let toastT;
 function showToast(msg,type='ok'){const el=document.getElementById('toast');document.getElementById('t-ico').textContent=type==='ok'?'✅':'⚠️';document.getElementById('t-msg').textContent=msg;el.className='toast show '+(type==='ok'?'ok':'err');clearTimeout(toastT);toastT=setTimeout(()=>{el.className='toast';},3500);}
 
-let JSONBIN_BIN_ID=localStorage.getItem('gmt_bin_id')||'';
-let JSONBIN_API_KEY=localStorage.getItem('gmt_api_key')||'';
-let syncEnabled=!!(JSONBIN_BIN_ID&&JSONBIN_API_KEY);
-const SYNC_INTERVAL=30000;
-let lastSyncHash='',isSyncing=false,syncTimer=null;
-function hashDB(data){return data.length+'_'+(data[0]?.id||'x');}
+// ── POCKETBASE CLIENT ─────────────────────────────────────────────────────────
+let PB_URL=localStorage.getItem('pb_url')||'';
+const PB_COLS={contracts:'contratos',cli:'clientes',estoque:'estoque',forn:'fornecedores',os:'os'};
+
+async function pbReq(path,opts={}){
+  if(!PB_URL)throw new Error('PocketBase URL não configurado');
+  const res=await fetch(PB_URL+path,{headers:{'Content-Type':'application/json',...(opts.headers||{})},method:opts.method||'GET',body:opts.body||undefined});
+  if(!res.ok){const t=await res.text();throw new Error(t);}
+  return opts.method==='DELETE'?null:res.json();
+}
+async function pbList(col){const d=await pbReq(`/api/collections/${col}/records?perPage=500&sort=created`);return d.items||[];}
+async function pbCreate(col,data){return pbReq(`/api/collections/${col}/records`,{method:'POST',body:JSON.stringify(data)});}
+async function pbPatch(col,id,data){return pbReq(`/api/collections/${col}/records/${id}`,{method:'PATCH',body:JSON.stringify(data)});}
+async function pbDel(col,id){return pbReq(`/api/collections/${col}/records/${id}`,{method:'DELETE'});}
+
+function pbToContract(r){return{id:r.id,client:r.client||'',cnpj:r.cnpj||'',contrato:r.contrato||'',anivDate:parseDate(r.anivDate),vencDate:parseDate(r.vencDate),obs:r.obs||''};}
+function pbToExtra(r,tab){const cfg=EXTRA_CFG[tab];if(!cfg)return null;const o={id:r.id};cfg.fields.forEach(f=>o[f.k]=r[f.k]||'');return o;}
+
 function setSyncStatus(st){
   const el=document.getElementById('sync-status');if(!el)return;
   const dr=document.getElementById('dr-sync');
-  const m={off:{ico:'🔴',txt:'Sync off'},ok:{ico:'🟢',txt:'Sincronizado'},syncing:{ico:'🔄',txt:'Sincronizando…'},err:{ico:'🟡',txt:'Erro'}}[st]||{ico:'🔴',txt:'off'};
+  const m={off:{ico:'🔴',txt:'Offline'},ok:{ico:'🟢',txt:'Conectado'},syncing:{ico:'🔄',txt:'Carregando…'},err:{ico:'🟡',txt:'Erro'}}[st]||{ico:'🔴',txt:'off'};
   el.innerHTML=`<span class="sync-ico">${m.ico}</span><span>${m.txt}</span>`;
   el.className='sync-pill'+(st==='syncing'?' syncing':st==='ok'?' ok':st==='err'?' err':'');
   if(dr)dr.textContent=st==='ok'?'on':st==='syncing'?'…':'off';
 }
-async function pushToBin(){if(!syncEnabled||isSyncing)return;const h=hashDB(db);if(h===lastSyncHash)return;isSyncing=true;setSyncStatus('syncing');try{const r=await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':JSONBIN_API_KEY,'X-Bin-Versioning':'false'},body:JSON.stringify({contracts:db.map(serC)})});if(r.ok){lastSyncHash=h;setSyncStatus('ok');}else setSyncStatus('err');}catch(e){setSyncStatus('err');}isSyncing=false;}
-async function pullFromBin(){if(!syncEnabled||isSyncing)return;isSyncing=true;setSyncStatus('syncing');try{const r=await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`,{headers:{'X-Master-Key':JSONBIN_API_KEY}});if(r.ok){const j=await r.json();const remote=(j.record?.contracts||[]).map(deserC);if(j.record?.contracts!==undefined){db=remote;localStorage.setItem('cd3',JSON.stringify(db.map(serC)));renderAll();lastSyncHash=hashDB(db);setSyncStatus('ok');}else setSyncStatus('ok');}else setSyncStatus('err');}catch(e){setSyncStatus('err');}isSyncing=false;}
-function startSync(){if(!syncEnabled){setSyncStatus('off');return;}pullFromBin();if(syncTimer)clearInterval(syncTimer);syncTimer=setInterval(pullFromBin,SYNC_INTERVAL);}
-function saveSyncConfig(){const bid=document.getElementById('sync-bin-id').value.trim();const key=document.getElementById('sync-api-key').value.trim();if(!bid||!key){showToast('Preencha BIN ID e API Key.','err');return;}JSONBIN_BIN_ID=bid;JSONBIN_API_KEY=key;syncEnabled=true;localStorage.setItem('gmt_bin_id',bid);localStorage.setItem('gmt_api_key',key);closeOv('ov-sync');startSync();showToast('Sync ativado!','ok');}
-function clearSyncConfig(){JSONBIN_BIN_ID='';JSONBIN_API_KEY='';syncEnabled=false;localStorage.removeItem('gmt_bin_id');localStorage.removeItem('gmt_api_key');if(syncTimer)clearInterval(syncTimer);closeOv('ov-sync');setSyncStatus('off');showToast('Sync desativado.','ok');}
+
+async function loadFromPB(){
+  if(!PB_URL){setSyncStatus('off');return;}
+  setSyncStatus('syncing');
+  try{
+    const rows=await pbList(PB_COLS.contracts);
+    db=rows.map(pbToContract);
+    localStorage.setItem('cd3',JSON.stringify(db.map(serC)));
+    renderAll();
+    for(const tab of ['cli','estoque','forn','os']){
+      const items=await pbList(PB_COLS[tab]);
+      extraDB[tab]=items.map(r=>pbToExtra(r,tab)).filter(Boolean);
+      localStorage.setItem(EXTRA_KEYS[tab],JSON.stringify(extraDB[tab]));
+      renderExtra(tab);
+    }
+    setSyncStatus('ok');updateBadges();
+  }catch(e){setSyncStatus('err');showToast('Erro PocketBase: '+e.message,'err');}
+}
+
+let pbTimer=null;
+function startPBSync(){if(!PB_URL){setSyncStatus('off');return;}loadFromPB();if(pbTimer)clearInterval(pbTimer);pbTimer=setInterval(loadFromPB,30000);}
+function savePBConfig(){const url=document.getElementById('pb-url').value.trim().replace(/\/$/,'');if(!url){showToast('Informe a URL do PocketBase.','err');return;}PB_URL=url;localStorage.setItem('pb_url',url);closeOv('ov-sync');startPBSync();showToast('PocketBase configurado!','ok');}
+function clearPBConfig(){PB_URL='';localStorage.removeItem('pb_url');if(pbTimer)clearInterval(pbTimer);closeOv('ov-sync');setSyncStatus('off');showToast('PocketBase desconectado.','ok');}
 
 const EXTRA_KEYS={estoque:'gm_estoque',os:'gm_os',forn:'gm_forn',cli:'gm_cli'};
 const extraDB={estoque:[],os:[],forn:[],cli:[]};
@@ -1198,25 +1221,24 @@ function renderCli(){renderExtra('cli');}
 function openAddExtra(tab){extraEditId=null;extraCurrentTab=tab;const cfg=EXTRA_CFG[tab];document.getElementById('extra-modal-title').textContent='Adicionar '+cfg.title;document.getElementById('extra-modal-sub').textContent='';document.getElementById('extra-modal-body').innerHTML=buildForm(cfg.fields,{});openOv('ov-extra');}
 function openEditExtra(tab,id){extraCurrentTab=tab;extraEditId=id;const cfg=EXTRA_CFG[tab];const r=extraDB[tab].find(x=>x.id===id)||{};document.getElementById('extra-modal-title').textContent='Editar '+cfg.title;document.getElementById('extra-modal-sub').textContent=r[cfg.fields[0].k]||'';document.getElementById('extra-modal-body').innerHTML=buildForm(cfg.fields,r);openOv('ov-extra');}
 function buildForm(fields,data){return fields.map(f=>{const v=esc(data[f.k]||'');if(f.t==='textarea')return`<div class="fg"><label class="fl">${f.l}${f.req?'<span class="req">*</span>':''}</label><textarea class="fi" id="ef-${f.k}" rows="3" placeholder="${f.ph||''}">${v}</textarea></div>`;if(f.t==='select')return`<div class="fg"><label class="fl">${f.l}</label><select class="fi" id="ef-${f.k}">${(f.opts||[]).map(o=>`<option value="${o}" ${data[f.k]===o?'selected':''}>${o}</option>`).join('')}</select></div>`;return`<div class="fg"><label class="fl">${f.l}${f.req?'<span class="req">*</span>':''}</label><input class="fi" id="ef-${f.k}" type="${f.t||'text'}" placeholder="${f.ph||''}" value="${v}"/></div>`;}).join('');}
-function saveExtra(){const tab=extraCurrentTab;const cfg=EXTRA_CFG[tab];const obj={id:extraEditId||('x'+Date.now()+Math.random().toString(36).slice(2))};let valid=true;cfg.fields.forEach(f=>{const el=document.getElementById('ef-'+f.k);if(!el)return;obj[f.k]=el.value.trim();if(f.req&&!obj[f.k]){el.style.borderColor='var(--danger)';valid=false;}else if(el)el.style.borderColor='';});if(!valid){showToast('Preencha os campos obrigatórios.','err');return;}if(extraEditId){const i=extraDB[tab].findIndex(x=>x.id===extraEditId);if(i>=0)extraDB[tab][i]=obj;}else extraDB[tab].push(obj);saveExtraDB(tab);renderExtra(tab);closeOv('ov-extra');showToast(extraEditId?'Registro atualizado.':'Registro adicionado.','ok');}
-function delExtra(tab,id){if(!confirm('Excluir este registro?'))return;extraDB[tab]=extraDB[tab].filter(x=>x.id!==id);selectedExtra[tab].delete(id);saveExtraDB(tab);renderExtra(tab);showToast('Registro excluído.','ok');}
+async function saveExtra(){const tab=extraCurrentTab;const cfg=EXTRA_CFG[tab];const obj={};let valid=true;cfg.fields.forEach(f=>{const el=document.getElementById('ef-'+f.k);if(!el)return;obj[f.k]=el.value.trim();if(f.req&&!obj[f.k]){el.style.borderColor='var(--danger)';valid=false;}else if(el)el.style.borderColor='';});if(!valid){showToast('Preencha os campos obrigatórios.','err');return;}try{if(extraEditId){await pbPatch(PB_COLS[tab],extraEditId,obj);const i=extraDB[tab].findIndex(x=>x.id===extraEditId);if(i>=0)extraDB[tab][i]={...extraDB[tab][i],...obj};}else{const r=await pbCreate(PB_COLS[tab],obj);extraDB[tab].push({id:r.id,...obj});}saveExtraDB(tab);renderExtra(tab);closeOv('ov-extra');showToast(extraEditId?'Registro atualizado.':'Registro adicionado.','ok');}catch(e){showToast('Erro ao salvar: '+e.message,'err');}}
+async function delExtra(tab,id){if(!confirm('Excluir este registro?'))return;try{await pbDel(PB_COLS[tab],id);}catch(e){showToast('Erro ao excluir: '+e.message,'err');return;}extraDB[tab]=extraDB[tab].filter(x=>x.id!==id);selectedExtra[tab].delete(id);saveExtraDB(tab);renderExtra(tab);showToast('Registro excluído.','ok');}
 
 function onRowCheckExtra(cb,tab){const id=cb.dataset.id,tr=cb.closest('tr');if(cb.checked){selectedExtra[tab].add(id);tr.classList.add('selected');}else{selectedExtra[tab].delete(id);tr.classList.remove('selected');}updateBulkBarExtra(tab);syncHeaderCheckboxExtra(tab);}
 function toggleAllExtra(m,tab){document.querySelectorAll(`#tbl-${tab} .row-cb`).forEach(cb=>{cb.checked=m.checked;const tr=cb.closest('tr');if(m.checked){selectedExtra[tab].add(cb.dataset.id);tr.classList.add('selected');}else{selectedExtra[tab].delete(cb.dataset.id);tr.classList.remove('selected');}});updateBulkBarExtra(tab);}
 function syncHeaderCheckboxExtra(tab){const all=document.querySelectorAll(`#tbl-${tab} .row-cb`),chk=document.querySelectorAll(`#tbl-${tab} .row-cb:checked`),m=document.getElementById(`chk-all-${tab}`);if(!m)return;m.indeterminate=chk.length>0&&chk.length<all.length;m.checked=all.length>0&&chk.length===all.length;}
 function updateBulkBarExtra(tab){const vis=new Set([...document.querySelectorAll(`#tbl-${tab} .row-cb`)].map(cb=>cb.dataset.id));const cnt=[...selectedExtra[tab]].filter(id=>vis.has(id)).length;const bar=document.getElementById(`bulk-${tab}`);const cEl=document.getElementById(`bulk-${tab}-count`);if(bar)bar.classList.toggle('visible',cnt>0);if(cEl)cEl.textContent=cnt===1?'1 selecionado':`${cnt} selecionados`;}
 function clearSelectionExtra(tab){document.querySelectorAll(`#tbl-${tab} .row-cb`).forEach(cb=>{selectedExtra[tab].delete(cb.dataset.id);cb.checked=false;cb.closest('tr').classList.remove('selected');});const m=document.getElementById(`chk-all-${tab}`);if(m){m.checked=false;m.indeterminate=false;}updateBulkBarExtra(tab);}
-function deleteSelectedExtra(tab){const vis=new Set([...document.querySelectorAll(`#tbl-${tab} .row-cb`)].map(cb=>cb.dataset.id));const toDel=[...selectedExtra[tab]].filter(id=>vis.has(id));if(!toDel.length)return;if(!confirm(`Excluir ${toDel.length} registro(s)?`))return;toDel.forEach(id=>selectedExtra[tab].delete(id));extraDB[tab]=extraDB[tab].filter(r=>!toDel.includes(r.id));saveExtraDB(tab);renderExtra(tab);showToast(`${toDel.length} registro(s) excluído(s).`,'ok');}
+async function deleteSelectedExtra(tab){const vis=new Set([...document.querySelectorAll(`#tbl-${tab} .row-cb`)].map(cb=>cb.dataset.id));const toDel=[...selectedExtra[tab]].filter(id=>vis.has(id));if(!toDel.length)return;if(!confirm(`Excluir ${toDel.length} registro(s)?`))return;try{await Promise.all(toDel.map(id=>pbDel(PB_COLS[tab],id)));}catch(e){showToast('Erro ao excluir: '+e.message,'err');return;}toDel.forEach(id=>selectedExtra[tab].delete(id));extraDB[tab]=extraDB[tab].filter(r=>!toDel.includes(r.id));saveExtraDB(tab);renderExtra(tab);showToast(`${toDel.length} registro(s) excluído(s).`,'ok');}
 
 window.addEventListener('DOMContentLoaded',()=>{
-  if(JSONBIN_BIN_ID)document.getElementById('sync-bin-id').value=JSONBIN_BIN_ID;
-  if(JSONBIN_API_KEY)document.getElementById('sync-api-key').value=JSONBIN_API_KEY;
+  if(PB_URL)document.getElementById('pb-url').value=PB_URL;
   initLogo();
 });
 
 renderAll();
 updateBadges();
-startSync();
+startPBSync();
 </script>
 </body>
 </html>
