@@ -1010,16 +1010,41 @@ header{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,e
         <div class="fg"><label class="flabel">Chamado do Cliente</label><input class="finput" id="osc-chamado" placeholder="Nº do chamado"/></div>
         <div class="fg"><label class="flabel">Categoria de Serviço</label><select class="finput" id="osc-categoria">
           <option value="">Selecione</option>
-          <option>Programação de rádio</option>
-          <option>Instalação de rádio fixo/móvel</option>
-          <option>Instalação de rádio portátil</option>
-          <option>Manutenção corretiva</option>
-          <option>Manutenção preventiva</option>
-          <option>Reparo no local</option>
-          <option>Outros</option>
+          <optgroup label="Radiocomunicação">
+            <option>Programação de rádio</option>
+            <option>Manutenção de rádio em campo</option>
+            <option>Instalação de rádio fixo/móvel</option>
+            <option>Instalação de Repetidora</option>
+            <option>Manutenção de rádio em laboratório</option>
+            <option>Instalação/Reparo de acessórios de rádio</option>
+            <option>Instalação/Reparo de Fontes</option>
+          </optgroup>
+          <optgroup label="Telefonia">
+            <option>Configuração em Tarifador</option>
+            <option>Manutenção em Tarifador</option>
+            <option>Manutenção em Call Center</option>
+            <option>Configuração em Call Center</option>
+            <option>Manutenção em Gravador</option>
+            <option>Configuração em Gravador</option>
+            <option>Manutenção em Sistema Dect</option>
+            <option>Instalação/Movimentação de ramal</option>
+            <option>Programação em ramal</option>
+            <option>Manutenção em ramal</option>
+            <option>Instalação de PABX</option>
+            <option>Configuração em PABX</option>
+            <option>Manutenção em PABX</option>
+            <option>Manutenção em rede telefônica</option>
+          </optgroup>
+          <optgroup label="Outros">
+            <option>Fornecimento de material</option>
+            <option>Locação de equipamento(s)</option>
+            <option>Atendimento no cliente</option>
+            <option>Acompanhamento técnico</option>
+            <option>Outros equipamentos e atividades</option>
+          </optgroup>
         </select></div>
         <div class="fg"><label class="flabel">Prioridade</label><select class="finput" id="osc-prioridade">
-          <option>Programada</option><option>Urgente</option><option>Emergencial</option>
+          <option>Programada</option><option>Normal</option><option>Alta</option><option>Urgente</option><option>Critica</option>
         </select></div>
         <div class="fg"><label class="flabel">Atendimento feito por</label><select class="finput" id="osc-tecnico"><option value="">Selecione</option></select></div>
         <div class="fg os-full"><label class="flabel">Serviço Solicitado</label><textarea class="finput" id="osc-desc" rows="4" placeholder="Descreva o serviço solicitado..."></textarea></div>
@@ -1056,16 +1081,41 @@ header{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,e
         <div class="fg"><label class="flabel">Chamado Externo</label><input class="finput" id="ose-chamado" placeholder=""/></div>
         <div class="fg"><label class="flabel">Categoria</label><select class="finput" id="ose-categoria">
           <option value="">Selecione</option>
-          <option>Programação de rádio</option>
-          <option>Instalação de rádio fixo/móvel</option>
-          <option>Instalação de rádio portátil</option>
-          <option>Manutenção corretiva</option>
-          <option>Manutenção preventiva</option>
-          <option>Reparo no local</option>
-          <option>Outros</option>
+          <optgroup label="Radiocomunicação">
+            <option>Programação de rádio</option>
+            <option>Manutenção de rádio em campo</option>
+            <option>Instalação de rádio fixo/móvel</option>
+            <option>Instalação de Repetidora</option>
+            <option>Manutenção de rádio em laboratório</option>
+            <option>Instalação/Reparo de acessórios de rádio</option>
+            <option>Instalação/Reparo de Fontes</option>
+          </optgroup>
+          <optgroup label="Telefonia">
+            <option>Configuração em Tarifador</option>
+            <option>Manutenção em Tarifador</option>
+            <option>Manutenção em Call Center</option>
+            <option>Configuração em Call Center</option>
+            <option>Manutenção em Gravador</option>
+            <option>Configuração em Gravador</option>
+            <option>Manutenção em Sistema Dect</option>
+            <option>Instalação/Movimentação de ramal</option>
+            <option>Programação em ramal</option>
+            <option>Manutenção em ramal</option>
+            <option>Instalação de PABX</option>
+            <option>Configuração em PABX</option>
+            <option>Manutenção em PABX</option>
+            <option>Manutenção em rede telefônica</option>
+          </optgroup>
+          <optgroup label="Outros">
+            <option>Fornecimento de material</option>
+            <option>Locação de equipamento(s)</option>
+            <option>Atendimento no cliente</option>
+            <option>Acompanhamento técnico</option>
+            <option>Outros equipamentos e atividades</option>
+          </optgroup>
         </select></div>
         <div class="fg"><label class="flabel">Prioridade</label><select class="finput" id="ose-prioridade">
-          <option>Programada</option><option>Urgente</option><option>Emergencial</option>
+          <option>Programada</option><option>Normal</option><option>Alta</option><option>Urgente</option><option>Critica</option>
         </select></div>
         <div class="fg"><label class="flabel">Status</label><select class="finput" id="ose-status">
           <option>Aberta</option><option>Em andamento</option><option>Locado</option>
@@ -1612,6 +1662,8 @@ async function loadFromPB(){
       localStorage.setItem(EXTRA_KEYS[tab],JSON.stringify(extraDB[tab]));
       renderExtra(tab);
     }
+    // Carrega usuários para os dropdowns de OS
+    try{usersDB=await pbList('usuarios');}catch(e){}
     setSyncStatus('ok');updateBadges();
   }catch(e){setSyncStatus('err');showToast('Erro PocketBase: '+e.message,'err');}
 }
@@ -1687,7 +1739,7 @@ function osPopulateSelects(prefix){
   if(sm){const cur=sm.value;sm.innerHTML='<option value="">Selecione um modelo</option>';extraDB.estoque.forEach(e=>sm.innerHTML+=`<option value="${esc(e.nome)}">${esc(e.nome)}${e.codigo?' ('+esc(e.codigo)+')':''}</option>`);sm.value=cur;}
   // Técnicos (usuários)
   const st=document.getElementById(prefix+'-tecnico');
-  if(st){const cur=st.value;st.innerHTML='<option value="">Selecione</option>';(usersDB||[]).forEach(u=>st.innerHTML+=`<option value="${esc(u.nome||u.login)}">${esc(u.nome||u.login)} (${u.cargo||''})</option>`);st.value=cur;}
+  if(st){const cur=st.value;st.innerHTML='<option value="">Selecione</option>';(usersDB||[]).forEach(u=>st.innerHTML+=`<option value="${esc(u.nome||u.login)}">${esc(u.nome||u.login)}</option>`);st.value=cur;}
 }
 function openOSCreate(){
   document.getElementById('os-create-num').textContent='Número: '+osNextNum();
