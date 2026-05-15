@@ -1707,7 +1707,7 @@ loadExtraDB();
 
 const EXTRA_CFG={
   estoque:{title:'Estoque',fields:[{k:'codigo',l:'Código',t:'text',ph:'EQ-001',req:true},{k:'nome',l:'Produto / Descrição',t:'text',ph:'Nome do produto',req:true},{k:'cat',l:'Categoria',t:'text',ph:'Ex: Roteador, Cabo...'},{k:'qtd',l:'Quantidade',t:'number',ph:'0'},{k:'qtdMin',l:'Qtd. Mínima',t:'number',ph:'0'},{k:'local',l:'Localização',t:'text',ph:'Ex: Prateleira A3'},{k:'obs',l:'Observações',t:'textarea',ph:''}],cols:['codigo','nome','cat','qtd','qtdMin','local','obs'],badge:'be'},
-  os:{title:'Ordem de Serviço',fields:[{k:'num',l:'Nº O.S.',t:'text',ph:'',req:true},{k:'client',l:'Cliente',t:'text',ph:'',req:true},{k:'tecnico',l:'Técnico',t:'text',ph:''},{k:'categoria',l:'Categoria',t:'text',ph:''},{k:'prioridade',l:'Prioridade',t:'text',ph:''},{k:'status',l:'Status',t:'text',ph:''},{k:'abertura',l:'Abertura',t:'text',ph:''},{k:'solicitante',l:'Solicitante',t:'text',ph:''},{k:'email',l:'E-mail',t:'text',ph:''},{k:'tel',l:'Telefone',t:'text',ph:''},{k:'contrato',l:'Contrato',t:'text',ph:''},{k:'centroCusto',l:'Centro de Custo',t:'text',ph:''},{k:'modelo',l:'Modelo',t:'text',ph:''},{k:'ativo',l:'Ativo/Asset',t:'text',ph:''},{k:'chamado',l:'Chamado',t:'text',ph:''},{k:'desc',l:'Serviço Solicitado',t:'textarea',ph:''},{k:'inicio',l:'Início',t:'text',ph:''},{k:'fim',l:'Fim',t:'text',ph:''},{k:'workLog',l:'Work Log',t:'textarea',ph:''},{k:'valMaterial',l:'Val. Material',t:'text',ph:''},{k:'valMdo',l:'Val. M.D.O',t:'text',ph:''},{k:'valExterno',l:'Val. Externo',t:'text',ph:''},{k:'abertoPor',l:'Aberto por',t:'text',ph:''}],cols:['num','client','tecnico','categoria','status','prioridade'],badge:'bos'},
+  os:{title:'Ordem de Serviço',fields:[{k:'num',l:'Nº O.S.',t:'text',ph:'',req:true},{k:'client',l:'Cliente',t:'text',ph:'',req:true},{k:'tecnico',l:'Técnico',t:'text',ph:''},{k:'categoria',l:'Categoria',t:'text',ph:''},{k:'prioridade',l:'Prioridade',t:'text',ph:''},{k:'status',l:'Status',t:'text',ph:''},{k:'abertura',l:'Abertura',t:'text',ph:''},{k:'solicitante',l:'Solicitante',t:'text',ph:''},{k:'email',l:'E-mail',t:'text',ph:''},{k:'tel',l:'Telefone',t:'text',ph:''},{k:'contrato',l:'Contrato',t:'text',ph:''},{k:'centroCusto',l:'Centro de Custo',t:'text',ph:''},{k:'modelo',l:'Modelo',t:'text',ph:''},{k:'ativo',l:'Ativo/Asset',t:'text',ph:''},{k:'chamado',l:'Chamado',t:'text',ph:''},{k:'desc',l:'Serviço Solicitado',t:'textarea',ph:''},{k:'inicio',l:'Início',t:'text',ph:''},{k:'fim',l:'Fim',t:'text',ph:''},{k:'worklog',l:'Work Log',t:'textarea',ph:''},{k:'valMaterial',l:'Val. Material',t:'text',ph:''},{k:'valMdo',l:'Val. M.D.O',t:'text',ph:''},{k:'valExterno',l:'Val. Externo',t:'text',ph:''},{k:'abertoPor',l:'Aberto por',t:'text',ph:''}],cols:['num','client','tecnico','categoria','status','prioridade'],badge:'bos'},
   forn:{title:'Fornecedor',fields:[{k:'nome',l:'Fornecedor',t:'text',ph:'Razão social',req:true},{k:'cnpj',l:'CNPJ',t:'text',ph:'00.000.000/0000-00'},{k:'contato',l:'Contato',t:'text',ph:'Nome do responsável'},{k:'tel',l:'Telefone',t:'text',ph:'(00) 00000-0000'},{k:'email',l:'E-mail',t:'text',ph:'email@fornecedor.com'},{k:'cat',l:'Categoria',t:'text',ph:'Ex: Equipamentos, Serviços...'},{k:'obs',l:'Observações',t:'textarea',ph:''}],cols:['nome','cnpj','contato','tel','email','cat','obs'],badge:'bf'},
   cli:{title:'Cliente',fields:[{k:'nome',l:'Cliente',t:'text',ph:'Razão social / Nome',req:true},{k:'doc',l:'CNPJ / CPF',t:'text',ph:'00.000.000/0000-00'},{k:'contato',l:'Contato',t:'text',ph:'Nome do responsável'},{k:'tel',l:'Telefone',t:'text',ph:'(00) 00000-0000'},{k:'email',l:'E-mail',t:'text',ph:'email@cliente.com'},{k:'cidade',l:'Cidade / UF',t:'text',ph:'Ex: São Paulo / SP'},{k:'obs',l:'Observações',t:'textarea',ph:''}],cols:['nome','doc','contato','tel','email','cidade','obs'],badge:'bc'},
 };
@@ -1813,7 +1813,7 @@ async function saveOSCreate(){
     status:'Aberta',
     abertura:new Date().toISOString(),
     abertoPor:currentUser?.nome||currentUser?.login||'',
-    workLog:entradaInicial,
+    worklog:entradaInicial,
     inicio:'', fim:'',
     valMaterial:'', valMdo:'', valExterno:'',
   };
@@ -1854,7 +1854,7 @@ function openOSEdit(id){
   document.getElementById('ose-centroCusto').value=r.centroCusto||'';
   document.getElementById('ose-worklog-new').value='';
   const prevEl=document.getElementById('ose-worklog-preview');
-  if(prevEl)prevEl.textContent=r.workLog||'(sem registros)';
+  if(prevEl)prevEl.textContent=r.worklog||'(sem registros)';
   document.getElementById('ose-valMaterial').value=r.valMaterial||'';
   document.getElementById('ose-valMdo').value=r.valMdo||'';
   document.getElementById('ose-valExterno').value=r.valExterno||'';
@@ -1876,10 +1876,10 @@ async function saveOSEdit(){
   let wl='';
   try{
     const pbRecord=await pbReq(`/api/collections/${PB_COLS.os}/records/${osEditId}`);
-    wl=pbRecord.workLog||'';
+    wl=pbRecord.worklog||'';
   }catch(e){
     // Se PB não responder, usa o cache local como fallback (nunca perde o que já estava)
-    wl=r.workLog||'';
+    wl=r.worklog||'';
   }
   if(novaEntrada){
     const entrada=osLogEntry(novaEntrada);
@@ -1896,7 +1896,7 @@ async function saveOSEdit(){
     status:document.getElementById('ose-status').value,
     tecnico:document.getElementById('ose-tecnico').value,
     centroCusto:document.getElementById('ose-centroCusto').value.trim(),
-    workLog:wl,
+    worklog:wl,
     valMaterial:document.getElementById('ose-valMaterial').value||'',
     valMdo:document.getElementById('ose-valMdo').value||'',
     valExterno:document.getElementById('ose-valExterno').value||'',
@@ -1910,7 +1910,7 @@ async function saveOSEdit(){
     showToast('OS atualizada!','ok');
     // Atualiza preview sem fechar
     const prevEl=document.getElementById('ose-worklog-preview');
-    if(prevEl)prevEl.textContent=obj.workLog||'(sem registros)';
+    if(prevEl)prevEl.textContent=obj.worklog||'(sem registros)';
     document.getElementById('ose-worklog-new').value='';
   }catch(e){showToast('Erro ao salvar OS: '+e.message,'err');}
 }
@@ -1919,7 +1919,7 @@ function openOSHistorico(){
   if(!r)return;
   document.getElementById('osh-title').textContent=`Work Log — OS ${r.num||''}`;
   document.getElementById('osh-sub').textContent=r.client||'';
-  document.getElementById('osh-content').textContent=r.workLog||'(sem registros)';
+  document.getElementById('osh-content').textContent=r.worklog||'(sem registros)';
   openOv('ov-os-hist');
 }
 
@@ -2030,7 +2030,7 @@ function imprimirOS(){
 <!-- SERVIÇO EXECUTADO -->
 <div class="full-section">
   <div class="center-title">Serviço Executado</div>
-  <div class="worklog-box">${r.workLog||''}</div>
+  <div class="worklog-box">${r.worklog||''}</div>
 </div>
 
 <!-- ASSINATURAS + AVALIAÇÃO -->
