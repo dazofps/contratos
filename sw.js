@@ -1,19 +1,19 @@
 // Gamatel Service Worker
 const CACHE = 'gamatel-v1';
 const ASSETS = ['./contrato.html', './manifest.json'];
-
+ 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
   self.skipWaiting();
 });
-
+ 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys =>
     Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
   ));
   self.clients.claim();
 });
-
+ 
 self.addEventListener('fetch', e => {
   // Requisições ao PocketBase sempre vão para a rede
   if (e.request.url.includes(':8090')) return;
@@ -21,3 +21,4 @@ self.addEventListener('fetch', e => {
     fetch(e.request).catch(() => caches.match(e.request))
   );
 });
+ 
