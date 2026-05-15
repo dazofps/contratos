@@ -1139,7 +1139,7 @@ async function pbReq(path,opts={}){
   if(!res.ok){const t=await res.text();throw new Error(t);}
   return opts.method==='DELETE'?null:res.json();
 }
-async function pbList(col){const d=await pbReq(`/api/collections/${col}/records?perPage=500&sort=created`);return d.items||[];}
+async function pbList(col){const d=await pbReq(`/api/collections/${col}/records?perPage=500`);return d.items||[];}
 async function pbCreate(col,data){return pbReq(`/api/collections/${col}/records`,{method:'POST',body:JSON.stringify(data)});}
 async function pbPatch(col,id,data){return pbReq(`/api/collections/${col}/records/${id}`,{method:'PATCH',body:JSON.stringify(data)});}
 async function pbDel(col,id){return pbReq(`/api/collections/${col}/records/${id}`,{method:'DELETE'});}
