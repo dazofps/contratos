@@ -1379,11 +1379,10 @@ async function doLogin(){
   if(!login||!senha){errEl.textContent='Preencha login e senha.';return;}
   if(!PB_URL){errEl.textContent='PocketBase não configurado. Configure a URL no botão Sync.';return;}
   try{
-    // Busca só pelo login, compara senha no cliente (evita problemas de encoding no filtro)
-    const filter=encodeURIComponent(`login="${login}"`);
-    const d=await pbReq(`/api/collections/usuarios/records?filter=${filter}&perPage=1`);
-    const u=d.items&&d.items[0];
-    if(!u||u.senha!==senha){errEl.textContent='Login ou senha incorretos.';return;}
+    // Busca todos os usuários e compara no cliente (sem filtro para evitar problemas de encoding)
+    const d=await pbReq(`/api/collections/usuarios/records?perPage=200`);
+    const u=(d.items||[]).find(x=>x.login===login&&x.senha===senha);
+    if(!u){errEl.textContent='Login ou senha incorretos.';return;}
     currentUser={id:u.id,nome:u.nome,login:u.login,cargo:u.cargo};
     sessionStorage.setItem('gmt_user',JSON.stringify(currentUser));
     document.getElementById('login-overlay').classList.add('hidden');
