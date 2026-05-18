@@ -160,6 +160,7 @@ header{
 }
 .badge.red{background:rgba(239,68,68,.2);color:var(--danger);animation:pulseDot 2.2s infinite}
 .badge.amber{background:var(--warn-bg);color:var(--warn)}
+.badge.green{background:rgba(34,197,94,.15);color:#22c55e}
 .badge.blue{background:rgba(37,99,235,.2);color:var(--blue2)}
 @media(max-width:768px){.tabs{display:none}}
 
@@ -736,7 +737,7 @@ header{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,e
       </div>
     </div>
     <div class="bulk-bar" id="bulk-estoque"><span class="bulk-count" id="bulk-estoque-count">0 selecionados</span><button class="btn btn-ghost del-only" onclick="selectAllExtra('estoque')" style="padding:6px 11px;font-size:12px" id="sel-all-estoque">Selecionar todos</button><button class="btn btn-ghost" onclick="clearSelectionExtra('estoque')" style="padding:6px 11px;font-size:12px">Limpar</button><button class="btn del-only" onclick="deleteSelectedExtra('estoque')" style="background:var(--danger-bg);color:var(--danger);border:1px solid rgba(239,68,68,.3);padding:6px 12px;font-size:12px">Excluir</button></div>
-    <div class="table-card"><div class="table-scroll"><table id="tbl-estoque"><thead><tr><th class="cb-cell"><input type="checkbox" id="chk-all-estoque" onchange="toggleAllExtra(this,'estoque')"/></th><th>Código</th><th>Produto / Descrição</th><th>Categoria</th><th>Qtd.</th><th>Qtd. Mín.</th><th>Preço Locação</th><th>Localização</th><th>Observações</th><th></th></tr></thead><tbody id="body-estoque"></tbody></table></div><div id="empty-estoque" class="empty" style="display:none"><div class="empty-ico">📦</div><div class="empty-title">Nenhum item no estoque</div><div class="empty-sub">Adicione itens abaixo.</div></div></div>
+    <div class="table-card"><div class="table-scroll"><table id="tbl-estoque"><thead><tr><th class="cb-cell"><input type="checkbox" id="chk-all-estoque" onchange="toggleAllExtra(this,'estoque')"/></th><th>Código / Série</th><th>Produto / Descrição</th><th>Categoria</th><th>Situação</th><th>Preço Locação</th><th>Localizado em</th><th>Observações</th><th></th></tr></thead><tbody id="body-estoque"></tbody></table></div><div id="empty-estoque" class="empty" style="display:none"><div class="empty-ico">📦</div><div class="empty-title">Nenhum item no estoque</div><div class="empty-sub">Adicione itens abaixo.</div></div></div>
     <div id="pag-estoque"></div>
     <div class="action-footer"><button class="btn btn-primary btn-add-extra" onclick="openAddExtra('estoque')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar Produto</button></div>
   </div>
@@ -1566,7 +1567,7 @@ function updateImportHint(){
   const hints = {
     contracts: { t: 'Colunas para Contratos:', c: 'cliente | cnpj | contrato | aniv. reajuste | vencimento | obs' },
     cli: { t: 'Colunas para Clientes:', c: 'nome | doc | contato | tel | email | cidade | obs' },
-    estoque: { t: 'Colunas para Estoque:', c: 'codigo | nome | cat | qtd | qtdMin | local | obs' },
+    estoque: { t: 'Colunas para Estoque:', c: 'codigo | nome | cat | situacao | precoLoc | local | obs' },
     forn: { t: 'Colunas para Fornecedores:', c: 'nome | cnpj | contato | tel | email | cat | obs' },
     os: { t: 'Colunas para O.S.:', c: 'num | client | tecnico | abertura | previsao | status | desc' }
   };
@@ -1593,10 +1594,10 @@ const COLS={
   email:   ['email','e-mail','correio','mail'],
   cidade:  ['cidade','cidade/uf','municipio','município','localidade','uf','estado'],
   // ── Estoque ─────────────────────────────────────────────────
-  codigo:  ['codigo','código','cod','ref','code','sku','item','referencia','referência','part number'],
-  qtd:     ['qtd','quantidade','estoque','saldo','qtde','qty'],
-  qtdMin:  ['qtd min','qtd minima','qtd mínima','quantidade minima','quantidade mínima','estoque minimo','minimo','mínimo'],
-  local:   ['localizacao','localização','local','deposito','depósito','prateleira','armazem','armazém','setor'],
+  nome:    ['produto','nome','descricao','descrição','product','item','descr','equipamento','material'],
+  codigo:  ['codigo','código','cod','ref','code','sku','serie','nº serie','numero serie','serial','referencia','referência','part number'],
+  situacao:['situacao','situação','status','disponibilidade','disponivel','locado','estado','condicao','condição'],
+  local:   ['localizacao','localização','local','deposito','depósito','prateleira','armazem','armazém','setor','localizado em','cliente atual'],
   cat:     ['categoria','cat','tipo','classificacao','classificação','grupo','familia','família'],
   // ── Fornecedores ─────────────────────────────────────────────
   // (usa client para nome, doc para cnpj, contato, tel, email, cat, obs — já mapeados)
@@ -1613,6 +1614,7 @@ const COLS={
   ativo:     ['ativo','asset','patrimonio','patrimônio','tag'],
   inicio:    ['inicio','início','data inicio','data de inicio','start'],
   fim:       ['fim','data fim','data de fim','conclusao','conclusão','encerramento','end'],
+  precoLoc:  ['precolocacao','preco locacao','preço locacao','preco de locacao','preço de locação','precoloc','preco loc','valor locacao','valor de locacao','valor loc','preco mensal','valor mensal'],
 };
 
 function normStr(s){try{return String(s).normalize('NFD').replace(/[^\x00-\x7F]/g,'').toLowerCase().trim();}catch(e){return String(s).toLowerCase().trim();}}
@@ -1670,35 +1672,66 @@ function parseCSV(text){
 
 async function importRows(rows){
   const target=document.getElementById('imp-target').value;
-  let added=0,erros=0;
-  showToast('Importando...','ok');
+  let added=0,erros=0,skipped=0;
+  const total=rows.filter(r=>Object.values(r).some(v=>String(v).trim()!=='')).length;
+  const toastEl=document.getElementById('t-msg');
+  function updProgress(){if(toastEl)toastEl.textContent=`Importando... ${added+erros+skipped}/${total}`;}
+  showToast(`Importando 0/${total}`,'ok',true);
+
+  // Monta lista de tarefas (sem await ainda)
+  const tasks=[];
   for(const row of rows){
     const hasAnyData=Object.values(row).some(v=>String(v).trim()!=='');
     if(!hasAnyData)continue;
-    try{
-      if(target==='contracts'){
-        const client=String(findCol(row,'client')).trim();
-        const contrato=String(findCol(row,'contrato')).trim();
-        if(!client&&!contrato)continue;
-        if(client&&contrato&&db.find(c=>c.client===client&&c.contrato===contrato))continue;
-        const obj={client,cnpj:String(findCol(row,'cnpj')).trim(),contrato,anivDate:toInput(parseDate(findCol(row,'aniv'))),vencDate:toInput(parseDate(findCol(row,'venc'))),obs:String(findCol(row,'obs')).trim()};
-        const r=await pbCreate(PB_COLS.contracts,obj);
-        db.push(pbToContract(r));added++;
-      }else{
-        const cfg=EXTRA_CFG[target];if(!cfg)continue;
-        const obj={};
-        cfg.fields.forEach(f=>{const lk=(f.k==='nome'||f.k==='client')?'client':f.k;obj[f.k]=String(findCol(row,lk)).trim();});
-        const r=await pbCreate(PB_COLS[target],obj);
-        extraDB[target].push({id:r.id,...obj});added++;
-      }
-    }catch(e){console.warn('Import row error:',e);erros++;}
+    tasks.push(row);
   }
+
+  // Processa em lotes paralelos de 20
+  const BATCH=20;
+  for(let i=0;i<tasks.length;i+=BATCH){
+    const batch=tasks.slice(i,i+BATCH);
+    await Promise.all(batch.map(async row=>{
+      try{
+        if(target==='contracts'){
+          const client=String(findCol(row,'client')).trim();
+          const contrato=String(findCol(row,'contrato')).trim();
+          if(!client&&!contrato){skipped++;updProgress();return;}
+          if(client&&contrato&&db.find(c=>c.client===client&&c.contrato===contrato)){skipped++;updProgress();return;}
+          const obj={client,cnpj:String(findCol(row,'cnpj')).trim(),contrato,anivDate:toInput(parseDate(findCol(row,'aniv'))),vencDate:toInput(parseDate(findCol(row,'venc'))),obs:String(findCol(row,'obs')).trim()};
+          const r=await pbCreate(PB_COLS.contracts,obj);
+          db.push(pbToContract(r));added++;
+        }else{
+          const cfg=EXTRA_CFG[target];if(!cfg){skipped++;updProgress();return;}
+          const obj={};
+          cfg.fields.forEach(f=>{const v=findCol(row,f.k)||(f.k==='nome'?findCol(row,'client'):'');obj[f.k]=String(v).trim();});
+          // Extrai situação do campo obs para estoque (ex: "LOCADO / GSL..." → "Locado")
+          if(target==='estoque'&&!obj.situacao&&obj.obs){
+            const fw=obj.obs.split('/')[0].trim().toLowerCase();
+            if(fw.includes('locad')||fw.includes('entreg'))obj.situacao='Locado';
+            else if(fw.includes('devolv')||fw.includes('dispon'))obj.situacao='Disponível';
+            else if(fw.includes('manut'))obj.situacao='Em Manutenção';
+            else if(fw.includes('extrav'))obj.situacao='Extraviado';
+          }
+          // Proteção contra duplicata por código (estoque) ou nome (outros)
+          const dupeField=obj.codigo?'codigo':'nome';
+          const dupeVal=obj[dupeField]||'';
+          if(dupeVal&&extraDB[target].some(x=>x[dupeField]===dupeVal)){skipped++;updProgress();return;}
+          const r=await pbCreate(PB_COLS[target],obj);
+          extraDB[target].push({id:r.id,...obj});added++;
+        }
+        updProgress();
+      }catch(e){console.warn('Import row error:',e);erros++;updProgress();}
+    }));
+  }
+
   if(target==='contracts')saveDB();else saveExtraDB(target);
   closeOv('ov-imp');renderAll();
   if(['cli','estoque','forn','os'].includes(target))renderExtra(target);
-  if(added>0)showToast(`${added} registro(s) importado(s)!`,'ok');
-  else if(erros>0)showToast(`Nenhum registro importado. ${erros} erro(s). Verifique o console.`,'err');
-  else showToast('Nenhum registro novo encontrado (todos já existem ou arquivo vazio).','err');
+  const msg=[];
+  if(added>0)msg.push(`${added} importado(s)`);
+  if(skipped>0)msg.push(`${skipped} ignorado(s) (já existiam)`);
+  if(erros>0)msg.push(`${erros} erro(s)`);
+  showToast(msg.join(' · ')||'Nenhum registro novo.', erros>0?'err':'ok', false);
 }
 
 function doExport(){
@@ -1715,7 +1748,8 @@ const GAMATEL_LOGO='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA7AAAAOwCAYAAA
 function initLogo(){const saved=localStorage.getItem('cd3_logo_gamatel');const src=saved||GAMATEL_LOGO;const img=document.getElementById('logo-img');img.src=src;img.style.display='block';document.getElementById('logo-letters').style.display='none';}
 
 let toastT;
-function showToast(msg,type='ok'){const el=document.getElementById('toast');document.getElementById('t-ico').textContent=type==='ok'?'✅':'⚠️';document.getElementById('t-msg').textContent=msg;el.className='toast show '+(type==='ok'?'ok':'err');clearTimeout(toastT);toastT=setTimeout(()=>{el.className='toast';},3500);}
+function showToast(msg,type='ok',persist=false){const el=document.getElementById('toast');document.getElementById('t-ico').textContent=type==='ok'?'✅':'⚠️';document.getElementById('t-msg').textContent=msg;el.className='toast show '+(type==='ok'?'ok':'err');clearTimeout(toastT);if(!persist)toastT=setTimeout(()=>{el.className='toast';},3500);}
+function hideToast(){const el=document.getElementById('toast');clearTimeout(toastT);el.className='toast';}
 
 // ── POCKETBASE CLIENT ─────────────────────────────────────────────────────────
 let PB_URL=localStorage.getItem('pb_url')||'';
@@ -1790,7 +1824,7 @@ function saveExtraDB(tab){localStorage.setItem(EXTRA_KEYS[tab],JSON.stringify(ex
 loadExtraDB();
 
 const EXTRA_CFG={
-  estoque:{title:'Estoque',fields:[{k:'codigo',l:'Código',t:'text',ph:'EQ-001',req:true},{k:'nome',l:'Produto / Descrição',t:'text',ph:'Nome do produto',req:true},{k:'cat',l:'Categoria',t:'text',ph:'Ex: Roteador, Cabo...'},{k:'qtd',l:'Quantidade',t:'number',ph:'0'},{k:'qtdMin',l:'Qtd. Mínima',t:'number',ph:'0'},{k:'precoLoc',l:'Preço de Locação',t:'text',ph:'Ex: R$ 150,00/mês'},{k:'local',l:'Localização',t:'text',ph:'Ex: Prateleira A3'},{k:'obs',l:'Observações',t:'textarea',ph:''}],cols:['codigo','nome','cat','qtd','qtdMin','precoLoc','local','obs'],badge:'be'},
+  estoque:{title:'Estoque',fields:[{k:'codigo',l:'Código / Nº Série',t:'text',ph:'Ex: 22802A0577',req:true},{k:'nome',l:'Produto / Descrição',t:'text',ph:'Nome do produto',req:true},{k:'cat',l:'Categoria',t:'text',ph:'Ex: Rádio VHF, Rádio UHF...'},{k:'situacao',l:'Situação',t:'select',opts:['Disponível','Locado','Em Manutenção','Extraviado']},{k:'precoLoc',l:'Preço de Locação',t:'text',ph:'Ex: 150,00'},{k:'local',l:'Localizado em',t:'text',ph:'Ex: Nome do cliente'},{k:'obs',l:'Observações',t:'textarea',ph:''}],cols:['codigo','nome','cat','situacao','precoLoc','local','obs'],badge:'be'},
   os:{title:'Ordem de Serviço',fields:[{k:'num',l:'Nº O.S.',t:'text',ph:'',req:true},{k:'client',l:'Cliente',t:'text',ph:'',req:true},{k:'tecnico',l:'Técnico',t:'text',ph:''},{k:'categoria',l:'Categoria',t:'text',ph:''},{k:'prioridade',l:'Prioridade',t:'text',ph:''},{k:'status',l:'Status',t:'text',ph:''},{k:'abertura',l:'Abertura',t:'text',ph:''},{k:'solicitante',l:'Solicitante',t:'text',ph:''},{k:'email',l:'E-mail',t:'text',ph:''},{k:'tel',l:'Telefone',t:'text',ph:''},{k:'contrato',l:'Contrato',t:'text',ph:''},{k:'centroCusto',l:'Centro de Custo',t:'text',ph:''},{k:'modelo',l:'Modelo',t:'text',ph:''},{k:'ativo',l:'Ativo/Asset',t:'text',ph:''},{k:'chamado',l:'Chamado',t:'text',ph:''},{k:'desc',l:'Serviço Solicitado',t:'textarea',ph:''},{k:'inicio',l:'Início',t:'text',ph:''},{k:'fim',l:'Fim',t:'text',ph:''},{k:'worklog',l:'Work Log',t:'textarea',ph:''},{k:'valMaterial',l:'Val. Material',t:'text',ph:''},{k:'valMdo',l:'Val. M.D.O',t:'text',ph:''},{k:'valExterno',l:'Val. Externo',t:'text',ph:''},{k:'abertoPor',l:'Aberto por',t:'text',ph:''}],cols:['num','client','tecnico','categoria','status','prioridade'],badge:'bos'},
   forn:{title:'Fornecedor',fields:[{k:'nome',l:'Fornecedor',t:'text',ph:'Razão social',req:true},{k:'cnpj',l:'CNPJ',t:'text',ph:'00.000.000/0000-00'},{k:'contato',l:'Contato',t:'text',ph:'Nome do responsável'},{k:'tel',l:'Telefone',t:'text',ph:'(00) 00000-0000'},{k:'email',l:'E-mail',t:'text',ph:'email@fornecedor.com'},{k:'cat',l:'Categoria',t:'text',ph:'Ex: Equipamentos, Serviços...'},{k:'obs',l:'Observações',t:'textarea',ph:''}],cols:['nome','cnpj','contato','tel','email','cat','obs'],badge:'bf'},
   cli:{title:'Cliente',fields:[{k:'nome',l:'Cliente',t:'text',ph:'Razão social / Nome',req:true},{k:'doc',l:'CNPJ / CPF',t:'text',ph:'00.000.000/0000-00'},{k:'contato',l:'Contato',t:'text',ph:'Nome do responsável'},{k:'tel',l:'Telefone',t:'text',ph:'(00) 00000-0000'},{k:'email',l:'E-mail',t:'text',ph:'email@cliente.com'},{k:'cidade',l:'Cidade / UF',t:'text',ph:'Ex: São Paulo / SP'},{k:'obs',l:'Observações',t:'textarea',ph:''}],cols:['nome','doc','contato','tel','email','cidade','obs'],badge:'bc'},
@@ -1821,7 +1855,7 @@ function renderExtra(tab){
     const tr=document.createElement('tr');
     if(selectedExtra[tab].has(r.id))tr.classList.add('selected');
     const canDel=(currentUser?.cargo==='gerente');
-    tr.innerHTML=`<td class="cb-cell"><div class="cb-wrap"><input type="checkbox" class="row-cb" data-id="${r.id}" onchange="onRowCheckExtra(this,'${tab}')" ${selectedExtra[tab].has(r.id)?'checked':''}/></div></td>${cfg.cols.map(k=>`<td class="td-obs" title="${esc(r[k]||'')}">${esc(r[k]||'—')}</td>`).join('')}<td><div class="acts"><button class="ibtn" onclick="openEditExtra('${tab}','${r.id}')">✏️</button>${canDel?`<button class="ibtn del" onclick="delExtra('${tab}','${r.id}')">✕</button>`:''}</div></td>`;
+    tr.innerHTML=`<td class="cb-cell"><div class="cb-wrap"><input type="checkbox" class="row-cb" data-id="${r.id}" onchange="onRowCheckExtra(this,'${tab}')" ${selectedExtra[tab].has(r.id)?'checked':''}/></div></td>${cfg.cols.map(k=>{const val=r[k]||'';if(k==='situacao'){const cls={'Disponível':'badge green','Locado':'badge blue','Em Manutenção':'badge amber','Extraviado':'badge red'}[val]||'badge';return`<td><span class="${cls}">${esc(val||'—')}</span></td>`;}return`<td class="td-obs" title="${esc(val)}">${esc(val||'—')}</td>`;}).join('')}<td><div class="acts"><button class="ibtn" onclick="openEditExtra('${tab}','${r.id}')">✏️</button>${canDel?`<button class="ibtn del" onclick="delExtra('${tab}','${r.id}')">✕</button>`:''}</div></td>`;
     tbody.appendChild(tr);
   });
 
