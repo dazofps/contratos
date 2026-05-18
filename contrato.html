@@ -356,6 +356,15 @@ select.fi,select.finput{cursor:pointer}
 .sync-pill.err{color:var(--warn);border-color:rgba(245,158,11,.3)}
 .sync-pill.syncing .sync-ico{display:inline-block;animation:spin .9s linear infinite}
 
+/* ── PAGINAÇÃO ── */
+.pag-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--border);background:var(--surface);font-size:13px;color:var(--text2);flex-wrap:wrap;gap:8px}
+.pag-info{font-size:12px;color:var(--text2)}
+.pag-btns{display:flex;align-items:center;gap:4px}
+.pag-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text1);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;transition:background .15s}
+.pag-btn:hover:not(:disabled){background:var(--blue);color:#fff;border-color:var(--blue)}
+.pag-btn:disabled{opacity:.35;cursor:default}
+.pag-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700}
+
 /* ── ADD BUTTONS (below tables) ── */
 .action-footer{
   display: flex;
@@ -713,8 +722,9 @@ header{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,e
         <input id="q-cli" class="search-input" placeholder="Buscar cliente, CNPJ, contato..." oninput="renderCli()"/>
       </div>
     </div>
-    <div class="bulk-bar" id="bulk-cli"><span class="bulk-count" id="bulk-cli-count">0 selecionados</span><button class="btn btn-ghost" onclick="clearSelectionExtra('cli')" style="padding:6px 11px;font-size:12px">Limpar</button><button class="btn del-only" onclick="deleteSelectedExtra('cli')" style="background:var(--danger-bg);color:var(--danger);border:1px solid rgba(239,68,68,.3);padding:6px 12px;font-size:12px">Excluir</button></div>
+    <div class="bulk-bar" id="bulk-cli"><span class="bulk-count" id="bulk-cli-count">0 selecionados</span><button class="btn btn-ghost del-only" onclick="selectAllExtra('cli')" style="padding:6px 11px;font-size:12px" id="sel-all-cli">Selecionar todos</button><button class="btn btn-ghost" onclick="clearSelectionExtra('cli')" style="padding:6px 11px;font-size:12px">Limpar</button><button class="btn del-only" onclick="deleteSelectedExtra('cli')" style="background:var(--danger-bg);color:var(--danger);border:1px solid rgba(239,68,68,.3);padding:6px 12px;font-size:12px">Excluir</button></div>
     <div class="table-card"><div class="table-scroll"><table id="tbl-cli"><thead><tr><th class="cb-cell"><input type="checkbox" id="chk-all-cli" onchange="toggleAllExtra(this,'cli')"/></th><th>Cliente</th><th>CNPJ / CPF</th><th>Contato</th><th>Telefone</th><th>E-mail</th><th>Cidade / UF</th><th>Observações</th><th></th></tr></thead><tbody id="body-cli"></tbody></table></div><div id="empty-cli" class="empty" style="display:none"><div class="empty-ico">👥</div><div class="empty-title">Nenhum cliente</div><div class="empty-sub">Adicione clientes abaixo.</div></div></div>
+    <div id="pag-cli"></div>
     <div class="action-footer"><button class="btn btn-primary btn-add-extra" onclick="openAddExtra('cli')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar Cliente</button></div>
   </div>
 
@@ -725,8 +735,9 @@ header{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,e
         <input id="q-estoque" class="search-input" placeholder="Buscar produto, código..." oninput="renderEstoque()"/>
       </div>
     </div>
-    <div class="bulk-bar" id="bulk-estoque"><span class="bulk-count" id="bulk-estoque-count">0 selecionados</span><button class="btn btn-ghost" onclick="clearSelectionExtra('estoque')" style="padding:6px 11px;font-size:12px">Limpar</button><button class="btn del-only" onclick="deleteSelectedExtra('estoque')" style="background:var(--danger-bg);color:var(--danger);border:1px solid rgba(239,68,68,.3);padding:6px 12px;font-size:12px">Excluir</button></div>
+    <div class="bulk-bar" id="bulk-estoque"><span class="bulk-count" id="bulk-estoque-count">0 selecionados</span><button class="btn btn-ghost del-only" onclick="selectAllExtra('estoque')" style="padding:6px 11px;font-size:12px" id="sel-all-estoque">Selecionar todos</button><button class="btn btn-ghost" onclick="clearSelectionExtra('estoque')" style="padding:6px 11px;font-size:12px">Limpar</button><button class="btn del-only" onclick="deleteSelectedExtra('estoque')" style="background:var(--danger-bg);color:var(--danger);border:1px solid rgba(239,68,68,.3);padding:6px 12px;font-size:12px">Excluir</button></div>
     <div class="table-card"><div class="table-scroll"><table id="tbl-estoque"><thead><tr><th class="cb-cell"><input type="checkbox" id="chk-all-estoque" onchange="toggleAllExtra(this,'estoque')"/></th><th>Código</th><th>Produto / Descrição</th><th>Categoria</th><th>Qtd.</th><th>Qtd. Mín.</th><th>Localização</th><th>Observações</th><th></th></tr></thead><tbody id="body-estoque"></tbody></table></div><div id="empty-estoque" class="empty" style="display:none"><div class="empty-ico">📦</div><div class="empty-title">Nenhum item no estoque</div><div class="empty-sub">Adicione itens abaixo.</div></div></div>
+    <div id="pag-estoque"></div>
     <div class="action-footer"><button class="btn btn-primary btn-add-extra" onclick="openAddExtra('estoque')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar Produto</button></div>
   </div>
 
@@ -737,8 +748,9 @@ header{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,e
         <input id="q-forn" class="search-input" placeholder="Buscar fornecedor, CNPJ..." oninput="renderForn()"/>
       </div>
     </div>
-    <div class="bulk-bar" id="bulk-forn"><span class="bulk-count" id="bulk-forn-count">0 selecionados</span><button class="btn btn-ghost" onclick="clearSelectionExtra('forn')" style="padding:6px 11px;font-size:12px">Limpar</button><button class="btn del-only" onclick="deleteSelectedExtra('forn')" style="background:var(--danger-bg);color:var(--danger);border:1px solid rgba(239,68,68,.3);padding:6px 12px;font-size:12px">Excluir</button></div>
+    <div class="bulk-bar" id="bulk-forn"><span class="bulk-count" id="bulk-forn-count">0 selecionados</span><button class="btn btn-ghost del-only" onclick="selectAllExtra('forn')" style="padding:6px 11px;font-size:12px" id="sel-all-forn">Selecionar todos</button><button class="btn btn-ghost" onclick="clearSelectionExtra('forn')" style="padding:6px 11px;font-size:12px">Limpar</button><button class="btn del-only" onclick="deleteSelectedExtra('forn')" style="background:var(--danger-bg);color:var(--danger);border:1px solid rgba(239,68,68,.3);padding:6px 12px;font-size:12px">Excluir</button></div>
     <div class="table-card"><div class="table-scroll"><table id="tbl-forn"><thead><tr><th class="cb-cell"><input type="checkbox" id="chk-all-forn" onchange="toggleAllExtra(this,'forn')"/></th><th>Fornecedor</th><th>CNPJ</th><th>Contato</th><th>Telefone</th><th>E-mail</th><th>Categoria</th><th>Observações</th><th></th></tr></thead><tbody id="body-forn"></tbody></table></div><div id="empty-forn" class="empty" style="display:none"><div class="empty-ico">🚚</div><div class="empty-title">Nenhum fornecedor</div><div class="empty-sub">Adicione fornecedores abaixo.</div></div></div>
+    <div id="pag-forn"></div>
     <div class="action-footer"><button class="btn btn-primary btn-add-extra" onclick="openAddExtra('forn')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar Fornecedor</button></div>
   </div>
 
@@ -749,8 +761,9 @@ header{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,e
         <input id="q-os" class="search-input" placeholder="Buscar O.S., cliente, técnico..." oninput="renderOS()"/>
       </div>
     </div>
-    <div class="bulk-bar" id="bulk-os"><span class="bulk-count" id="bulk-os-count">0 selecionados</span><button class="btn btn-ghost" onclick="clearSelectionExtra('os')" style="padding:6px 11px;font-size:12px">Limpar</button><button class="btn del-only" onclick="deleteSelectedExtra('os')" style="background:var(--danger-bg);color:var(--danger);border:1px solid rgba(239,68,68,.3);padding:6px 12px;font-size:12px">Excluir</button></div>
+    <div class="bulk-bar" id="bulk-os"><span class="bulk-count" id="bulk-os-count">0 selecionados</span><button class="btn btn-ghost del-only" onclick="selectAllExtra('os')" style="padding:6px 11px;font-size:12px" id="sel-all-os">Selecionar todos</button><button class="btn btn-ghost" onclick="clearSelectionExtra('os')" style="padding:6px 11px;font-size:12px">Limpar</button><button class="btn del-only" onclick="deleteSelectedExtra('os')" style="background:var(--danger-bg);color:var(--danger);border:1px solid rgba(239,68,68,.3);padding:6px 12px;font-size:12px">Excluir</button></div>
     <div class="table-card"><div class="table-scroll"><table id="tbl-os"><thead><tr><th class="cb-cell"><input type="checkbox" id="chk-all-os" onchange="toggleAllExtra(this,'os')"/></th><th>Nº O.S.</th><th>Cliente</th><th>Técnico</th><th>Abertura</th><th>Previsão</th><th>Status</th><th>Descrição</th><th></th></tr></thead><tbody id="body-os"></tbody></table></div><div id="empty-os" class="empty" style="display:none"><div class="empty-ico">🔧</div><div class="empty-title">Nenhuma ordem de serviço</div><div class="empty-sub">Adicione O.S. abaixo.</div></div></div>
+    <div id="pag-os"></div>
     <div class="action-footer"><button class="btn btn-primary btn-add-extra" onclick="openAddExtra('os')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Abrir O.S.</button></div>
   </div>
 
@@ -1566,35 +1579,94 @@ function onDrop(e){e.preventDefault();document.getElementById('dz').classList.re
 function onFSel(e){const f=e.target.files[0];if(f)procFile(f);e.target.value='';}
 
 const COLS={
-  client:['cliente','client','nome','razão social','razao social'],
-  cnpj:['cnpj','cpf/cnpj','cpf','doc'],
-  doc:['doc','cnpj','cpf/cnpj','cpf'],
-  contrato:['contrato','nº contrato','numero contrato','contract','num contrato'],
-  aniv:['aniversario','aniversario/reajuste','aniv. reajuste','aniv reajuste','reajuste','aniv.'],
-  venc:['vencimento','venc','expiry','data vencimento','data de vencimento'],
-  obs:['observacoes','observacao','observações','obs','notas','notes'],
-  cat:['categoria','cat'],
-  qtd:['qtd','quantidade'],
-  qtdMin:['qtd min','quantidade mínima'],
-  local:['localização','local'],
-  contato:['contato','responsavel'],
-  tel:['telefone','tel'],
-  email:['email'],
-  cidade:['cidade','uf'],
-  tecnico:['tecnico'],
-  abertura:['abertura','data abertura'],
-  previsao:['previsao','previsão entrega'],
-  status:['status'],
-  codigo:['codigo','código','cod','ref','code'],
-  num:['num','numero','número','nº','n°','no os','os'],
-  desc:['desc','descricao','descrição','descr','detalhe','detalhes'],
+  // ── Contratos ───────────────────────────────────────────────
+  client:  ['cliente','client','nome','razao social','razão social','empresa','contratante','tomador'],
+  cnpj:    ['cnpj','cpf/cnpj','cpf','doc','documento','cadastro'],
+  doc:     ['doc','cnpj','cpf/cnpj','cpf','documento','cadastro'],
+  contrato:['contrato','no contrato','nº contrato','num contrato','numero contrato','numero do contrato','contract'],
+  aniv:    ['aniversario','aniversario/reajuste','aniv. reajuste','aniv reajuste','reajuste','aniv','data reajuste','data aniversario'],
+  venc:    ['vencimento','venc','data vencimento','data de vencimento','expiry','validade','vigencia','vigência'],
+  obs:     ['observacoes','observacao','observações','observação','obs','notas','notes','comentario','comentários'],
+  // ── Clientes ────────────────────────────────────────────────
+  contato: ['contato','responsavel','responsável','nome responsavel','nome do responsavel'],
+  tel:     ['telefone','tel','fone','celular','telefone celular','phone'],
+  email:   ['email','e-mail','correio','mail'],
+  cidade:  ['cidade','cidade/uf','municipio','município','localidade','uf','estado'],
+  // ── Estoque ─────────────────────────────────────────────────
+  codigo:  ['codigo','código','cod','ref','code','sku','item','referencia','referência','part number'],
+  qtd:     ['qtd','quantidade','estoque','saldo','qtde','qty'],
+  qtdMin:  ['qtd min','qtd minima','qtd mínima','quantidade minima','quantidade mínima','estoque minimo','minimo','mínimo'],
+  local:   ['localizacao','localização','local','deposito','depósito','prateleira','armazem','armazém','setor'],
+  cat:     ['categoria','cat','tipo','classificacao','classificação','grupo','familia','família'],
+  // ── Fornecedores ─────────────────────────────────────────────
+  // (usa client para nome, doc para cnpj, contato, tel, email, cat, obs — já mapeados)
+  // ── OS ───────────────────────────────────────────────────────
+  num:       ['num','numero','número','nº','n°','no os','os','chamado','ticket','ordem'],
+  desc:      ['desc','descricao','descrição','descr','detalhe','detalhes','servico','serviço','servico solicitado','serviço solicitado'],
+  status:    ['status','situacao','situação','estado'],
+  tecnico:   ['tecnico','técnico','atendente','responsavel','responsável'],
+  abertura:  ['abertura','data abertura','data de abertura','aberto em','criado em'],
+  prioridade:['prioridade','priority','urgencia','urgência'],
+  solicitante:['solicitante','requerente','solicitado por','pedido por'],
+  centroCusto:['centro custo','centro de custo','cc','cost center'],
+  modelo:    ['modelo','model','equipamento'],
+  ativo:     ['ativo','asset','patrimonio','patrimônio','tag'],
+  inicio:    ['inicio','início','data inicio','data de inicio','start'],
+  fim:       ['fim','data fim','data de fim','conclusao','conclusão','encerramento','end'],
 };
 
 function normStr(s){try{return String(s).normalize('NFD').replace(/[^\x00-\x7F]/g,'').toLowerCase().trim();}catch(e){return String(s).toLowerCase().trim();}}
 function findCol(row,key){const aliases=COLS[key];if(!aliases||!aliases.length)return '';const entries=Object.entries(row);for(const a of aliases){const na=normStr(a);const entry=entries.find(([k])=>normStr(k).includes(na));if(entry)return entry[1];}return '';}
 
-function procFile(file){const ext=file.name.split('.').pop().toLowerCase();const r=new FileReader();r.onload=e=>{try{let rows;if(ext==='csv'){const bytes=new Uint8Array(e.target.result);let text;for(const enc of['utf-8','windows-1252','iso-8859-1']){try{text=new TextDecoder(enc,{fatal:true}).decode(bytes);break;}catch(e){text=null;}}if(!text)text=new TextDecoder('windows-1252',{fatal:false}).decode(bytes);rows=parseCSV(text);}else{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});}importRows(rows);}catch(err){showToast('Erro ao ler arquivo: '+err.message,'err');}};r.readAsArrayBuffer(file);}
-function parseCSV(text){const lines=text.split(/\r?\n/).filter(l=>l.trim());const sep=lines[0].includes(';')?';':',';const headers=lines[0].split(sep).map(h=>h.trim().toLowerCase());return lines.slice(1).map(line=>{const vals=line.split(sep);const o={};headers.forEach((h,i)=>o[h]=(vals[i]||'').trim());return o;});}
+function decodeCSVBytes(bytes){
+  // BOM UTF-8
+  if(bytes[0]===0xEF&&bytes[1]===0xBB&&bytes[2]===0xBF)
+    return new TextDecoder('utf-8').decode(bytes.slice(3));
+  // BOM UTF-16 LE / BE
+  if(bytes[0]===0xFF&&bytes[1]===0xFE)
+    return new TextDecoder('utf-16le').decode(bytes.slice(2));
+  if(bytes[0]===0xFE&&bytes[1]===0xFF)
+    return new TextDecoder('utf-16be').decode(bytes.slice(2));
+  // Cascata: tenta cada encoding em modo estrito — o primeiro que não falhar é usado
+  for(const enc of['utf-8','windows-1252','iso-8859-1']){
+    try{return new TextDecoder(enc,{fatal:true}).decode(bytes);}catch(e){}
+  }
+  // Fallback permissivo — nunca falha
+  return new TextDecoder('windows-1252',{fatal:false}).decode(bytes);
+}
+
+function procFile(file){
+  const ext=file.name.split('.').pop().toLowerCase();
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      let rows;
+      const bytes=new Uint8Array(e.target.result);
+      if(ext==='csv'){
+        rows=parseCSV(decodeCSVBytes(bytes));
+      }else{
+        const wb=XLSX.read(bytes,{type:'array'});
+        rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:false});
+      }
+      importRows(rows);
+    }catch(err){showToast('Erro ao ler arquivo: '+err.message,'err');}
+  };
+  r.readAsArrayBuffer(file);
+}
+
+function parseCSV(text){
+  if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(!lines.length)return[];
+  const sep=lines[0].includes(';')?';':',';
+  const headers=lines[0].split(sep).map(h=>h.trim().toLowerCase());
+  return lines.slice(1).map(line=>{
+    const vals=line.split(sep);
+    const o={};
+    headers.forEach((h,i)=>o[h]=(vals[i]||'').trim());
+    return o;
+  });
+}
 
 async function importRows(rows){
   const target=document.getElementById('imp-target').value;
@@ -1655,7 +1727,17 @@ async function pbReq(path,opts={}){
   if(!res.ok){const t=await res.text();throw new Error(t);}
   return opts.method==='DELETE'?null:res.json();
 }
-async function pbList(col){const d=await pbReq(`/api/collections/${col}/records?perPage=500`);return d.items||[];}
+async function pbList(col){
+  let all=[],page=1;
+  while(true){
+    const d=await pbReq(`/api/collections/${col}/records?perPage=200&page=${page}`);
+    const items=d.items||[];
+    all=all.concat(items);
+    if(page>=(d.totalPages||1)||!items.length)break;
+    page++;
+  }
+  return all;
+}
 async function pbCreate(col,data){return pbReq(`/api/collections/${col}/records`,{method:'POST',body:JSON.stringify(data)});}
 async function pbPatch(col,id,data){return pbReq(`/api/collections/${col}/records/${id}`,{method:'PATCH',body:JSON.stringify(data)});}
 async function pbDel(col,id){return pbReq(`/api/collections/${col}/records/${id}`,{method:'DELETE'});}
@@ -1697,6 +1779,8 @@ function startPBSync(){if(!PB_URL){setSyncStatus('off');return;}loadFromPB();if(
 function savePBConfig(){const url=document.getElementById('pb-url').value.trim().replace(/\/$/,'');if(!url){showToast('Informe a URL do PocketBase.','err');return;}PB_URL=url;localStorage.setItem('pb_url',url);closeOv('ov-sync');startPBSync();showToast('PocketBase configurado!','ok');}
 function clearPBConfig(){PB_URL='';localStorage.removeItem('pb_url');if(pbTimer)clearInterval(pbTimer);closeOv('ov-sync');setSyncStatus('off');showToast('PocketBase desconectado.','ok');}
 
+const PAGE_SIZE=50;
+const extraPage={estoque:1,os:1,forn:1,cli:1};
 const EXTRA_KEYS={estoque:'gm_estoque',os:'gm_os',forn:'gm_forn',cli:'gm_cli'};
 const extraDB={estoque:[],os:[],forn:[],cli:[]};
 const selectedExtra={estoque:new Set(),os:new Set(),forn:new Set(),cli:new Set()};
@@ -1715,11 +1799,23 @@ const EXTRA_CFG={
 function renderExtra(tab){
   const cfg=EXTRA_CFG[tab];
   const q=(document.getElementById('q-'+tab)||{value:''}).value.toLowerCase();
-  const rows=extraDB[tab].filter(r=>cfg.cols.some(k=>String(r[k]||'').toLowerCase().includes(q)));
+  const filtered=extraDB[tab].filter(r=>cfg.cols.some(k=>String(r[k]||'').toLowerCase().includes(q)));
+  const totalAll=extraDB[tab].length;
+  const totalPages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));
+  if(extraPage[tab]>totalPages)extraPage[tab]=1;
+  const page=extraPage[tab];
+  const start=(page-1)*PAGE_SIZE;
+  const rows=filtered.slice(start,start+PAGE_SIZE);
+
   const tbody=document.getElementById('body-'+tab);
   const empty=document.getElementById('empty-'+tab);
   tbody.innerHTML='';
-  if(!rows.length){empty.style.display='';return;}
+  if(!filtered.length){
+    empty.style.display='';
+    const pagEl=document.getElementById('pag-'+tab);
+    if(pagEl)pagEl.innerHTML='';
+    return;
+  }
   empty.style.display='none';
   rows.forEach(r=>{
     const tr=document.createElement('tr');
@@ -1728,14 +1824,42 @@ function renderExtra(tab){
     tr.innerHTML=`<td class="cb-cell"><div class="cb-wrap"><input type="checkbox" class="row-cb" data-id="${r.id}" onchange="onRowCheckExtra(this,'${tab}')" ${selectedExtra[tab].has(r.id)?'checked':''}/></div></td>${cfg.cols.map(k=>`<td class="td-obs" title="${esc(r[k]||'')}">${esc(r[k]||'—')}</td>`).join('')}<td><div class="acts"><button class="ibtn" onclick="openEditExtra('${tab}','${r.id}')">✏️</button>${canDel?`<button class="ibtn del" onclick="delExtra('${tab}','${r.id}')">✕</button>`:''}</div></td>`;
     tbody.appendChild(tr);
   });
+
+  // Barra de paginação
+  const pagEl=document.getElementById('pag-'+tab);
+  if(pagEl){
+    const ini=start+1, fim=Math.min(start+PAGE_SIZE,filtered.length);
+    const infoTxt=filtered.length<totalAll
+      ? `${ini}–${fim} de <strong>${filtered.length}</strong> filtrados &nbsp;(${totalAll} total)`
+      : `${ini}–${fim} de <strong>${totalAll}</strong> itens`;
+    let btnHtml='';
+    if(totalPages>1){
+      const delta=2,rs=Math.max(1,page-delta),re=Math.min(totalPages,page+delta);
+      btnHtml+=`<button class="pag-btn" onclick="goPageExtra('${tab}',${page-1})" ${page===1?'disabled':''}>‹</button>`;
+      if(rs>1)btnHtml+=`<button class="pag-btn" onclick="goPageExtra('${tab}',1)">1</button>${rs>2?'<span style="padding:0 3px">…</span>':''}`;
+      for(let p=rs;p<=re;p++)btnHtml+=`<button class="pag-btn${p===page?' active':''}" onclick="goPageExtra('${tab}',${p})">${p}</button>`;
+      if(re<totalPages)btnHtml+=`${re<totalPages-1?'<span style="padding:0 3px">…</span>':''}<button class="pag-btn" onclick="goPageExtra('${tab}',${totalPages})">${totalPages}</button>`;
+      btnHtml+=`<button class="pag-btn" onclick="goPageExtra('${tab}',${page+1})" ${page===totalPages?'disabled':''}>›</button>`;
+    }
+    pagEl.innerHTML=`<div class="pag-bar"><span class="pag-info">${infoTxt}</span><div class="pag-btns">${btnHtml}</div></div>`;
+  }
+
   syncHeaderCheckboxExtra(tab);
   updateBulkBarExtra(tab);
   updateBadges();
 }
-function renderEstoque(){renderExtra('estoque');}
-function renderOS(){renderExtra('os');}
-function renderForn(){renderExtra('forn');}
-function renderCli(){renderExtra('cli');}
+function goPageExtra(tab,p){
+  const cfg=EXTRA_CFG[tab];
+  const q=(document.getElementById('q-'+tab)||{value:''}).value.toLowerCase();
+  const filtered=extraDB[tab].filter(r=>cfg.cols.some(k=>String(r[k]||'').toLowerCase().includes(q)));
+  const totalPages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));
+  extraPage[tab]=Math.max(1,Math.min(p,totalPages));
+  renderExtra(tab);
+}
+function renderEstoque(){extraPage.estoque=1;renderExtra('estoque');}
+function renderOS(){extraPage.os=1;renderExtra('os');}
+function renderForn(){extraPage.forn=1;renderExtra('forn');}
+function renderCli(){extraPage.cli=1;renderExtra('cli');}
 
 function openAddExtra(tab){
   if(tab==='os'){openOSCreate();return;}
@@ -2069,9 +2193,10 @@ async function delExtra(tab,id){if(!confirm('Excluir este registro?'))return;try
 function onRowCheckExtra(cb,tab){const id=cb.dataset.id,tr=cb.closest('tr');if(cb.checked){selectedExtra[tab].add(id);tr.classList.add('selected');}else{selectedExtra[tab].delete(id);tr.classList.remove('selected');}updateBulkBarExtra(tab);syncHeaderCheckboxExtra(tab);}
 function toggleAllExtra(m,tab){document.querySelectorAll(`#tbl-${tab} .row-cb`).forEach(cb=>{cb.checked=m.checked;const tr=cb.closest('tr');if(m.checked){selectedExtra[tab].add(cb.dataset.id);tr.classList.add('selected');}else{selectedExtra[tab].delete(cb.dataset.id);tr.classList.remove('selected');}});updateBulkBarExtra(tab);}
 function syncHeaderCheckboxExtra(tab){const all=document.querySelectorAll(`#tbl-${tab} .row-cb`),chk=document.querySelectorAll(`#tbl-${tab} .row-cb:checked`),m=document.getElementById(`chk-all-${tab}`);if(!m)return;m.indeterminate=chk.length>0&&chk.length<all.length;m.checked=all.length>0&&chk.length===all.length;}
-function updateBulkBarExtra(tab){const vis=new Set([...document.querySelectorAll(`#tbl-${tab} .row-cb`)].map(cb=>cb.dataset.id));const cnt=[...selectedExtra[tab]].filter(id=>vis.has(id)).length;const bar=document.getElementById(`bulk-${tab}`);const cEl=document.getElementById(`bulk-${tab}-count`);if(bar)bar.classList.toggle('visible',cnt>0);if(cEl)cEl.textContent=cnt===1?'1 selecionado':`${cnt} selecionados`;}
-function clearSelectionExtra(tab){document.querySelectorAll(`#tbl-${tab} .row-cb`).forEach(cb=>{selectedExtra[tab].delete(cb.dataset.id);cb.checked=false;cb.closest('tr').classList.remove('selected');});const m=document.getElementById(`chk-all-${tab}`);if(m){m.checked=false;m.indeterminate=false;}updateBulkBarExtra(tab);}
-async function deleteSelectedExtra(tab){const vis=new Set([...document.querySelectorAll(`#tbl-${tab} .row-cb`)].map(cb=>cb.dataset.id));const toDel=[...selectedExtra[tab]].filter(id=>vis.has(id));if(!toDel.length)return;if(!confirm(`Excluir ${toDel.length} registro(s)?`))return;try{await Promise.all(toDel.map(id=>pbDel(PB_COLS[tab],id)));}catch(e){showToast('Erro ao excluir: '+e.message,'err');return;}toDel.forEach(id=>selectedExtra[tab].delete(id));extraDB[tab]=extraDB[tab].filter(r=>!toDel.includes(r.id));saveExtraDB(tab);renderExtra(tab);showToast(`${toDel.length} registro(s) excluído(s).`,'ok');}
+function updateBulkBarExtra(tab){const cnt=selectedExtra[tab].size;const bar=document.getElementById(`bulk-${tab}`);const cEl=document.getElementById(`bulk-${tab}-count`);if(bar)bar.classList.toggle('visible',cnt>0);if(cEl)cEl.textContent=cnt===1?'1 selecionado':`${cnt} selecionados`;}
+function clearSelectionExtra(tab){selectedExtra[tab].clear();document.querySelectorAll(`#tbl-${tab} .row-cb`).forEach(cb=>{cb.checked=false;cb.closest('tr').classList.remove('selected');});const m=document.getElementById(`chk-all-${tab}`);if(m){m.checked=false;m.indeterminate=false;}updateBulkBarExtra(tab);}
+function selectAllExtra(tab){extraDB[tab].forEach(r=>selectedExtra[tab].add(r.id));renderExtra(tab);}
+async function deleteSelectedExtra(tab){const toDel=[...selectedExtra[tab]];if(!toDel.length)return;if(!confirm(`Excluir ${toDel.length} registro(s)?`))return;try{await Promise.all(toDel.map(id=>pbDel(PB_COLS[tab],id)));}catch(e){showToast('Erro ao excluir: '+e.message,'err');return;}selectedExtra[tab].clear();extraDB[tab]=extraDB[tab].filter(r=>!toDel.includes(r.id));saveExtraDB(tab);renderExtra(tab);showToast(`${toDel.length} registro(s) excluído(s).`,'ok');}
 
 // ── AUTH / LOGIN ──────────────────────────────────────────────────────────────
 let currentUser=null;
