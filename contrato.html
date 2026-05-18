@@ -737,7 +737,7 @@ header{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,e
       </div>
     </div>
     <div class="bulk-bar" id="bulk-estoque"><span class="bulk-count" id="bulk-estoque-count">0 selecionados</span><button class="btn btn-ghost del-only" onclick="selectAllExtra('estoque')" style="padding:6px 11px;font-size:12px" id="sel-all-estoque">Selecionar todos</button><button class="btn btn-ghost" onclick="clearSelectionExtra('estoque')" style="padding:6px 11px;font-size:12px">Limpar</button><button class="btn del-only" onclick="deleteSelectedExtra('estoque')" style="background:var(--danger-bg);color:var(--danger);border:1px solid rgba(239,68,68,.3);padding:6px 12px;font-size:12px">Excluir</button></div>
-    <div class="table-card"><div class="table-scroll"><table id="tbl-estoque"><thead><tr><th class="cb-cell"><input type="checkbox" id="chk-all-estoque" onchange="toggleAllExtra(this,'estoque')"/></th><th>Código / Série</th><th>Produto / Descrição</th><th>Categoria</th><th>Situação</th><th>Preço Locação</th><th>Localizado em</th><th>Observações</th><th></th></tr></thead><tbody id="body-estoque"></tbody></table></div><div id="empty-estoque" class="empty" style="display:none"><div class="empty-ico">📦</div><div class="empty-title">Nenhum item no estoque</div><div class="empty-sub">Adicione itens abaixo.</div></div></div>
+    <div class="table-card"><div class="table-scroll"><table id="tbl-estoque"><thead><tr><th class="cb-cell"><input type="checkbox" id="chk-all-estoque" onchange="toggleAllExtra(this,'estoque')"/></th><th>Código / Série</th><th>Produto / Descrição</th><th>Categoria</th><th>Situação</th><th>Contrato</th><th>Preço Locação</th><th>Localizado em</th><th>Observações</th><th></th></tr></thead><tbody id="body-estoque"></tbody></table></div><div id="empty-estoque" class="empty" style="display:none"><div class="empty-ico">📦</div><div class="empty-title">Nenhum item no estoque</div><div class="empty-sub">Adicione itens abaixo.</div></div></div>
     <div id="pag-estoque"></div>
     <div class="action-footer"><button class="btn btn-primary btn-add-extra" onclick="openAddExtra('estoque')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Adicionar Produto</button></div>
   </div>
@@ -1567,7 +1567,7 @@ function updateImportHint(){
   const hints = {
     contracts: { t: 'Colunas para Contratos:', c: 'cliente | cnpj | contrato | aniv. reajuste | vencimento | obs' },
     cli: { t: 'Colunas para Clientes:', c: 'nome | doc | contato | tel | email | cidade | obs' },
-    estoque: { t: 'Colunas para Estoque:', c: 'codigo | nome | cat | situacao | precoLoc | local | obs' },
+    estoque: { t: 'Colunas para Estoque:', c: 'codigo | nome | cat | situacao | contrato | precoLoc | local | obs' },
     forn: { t: 'Colunas para Fornecedores:', c: 'nome | cnpj | contato | tel | email | cat | obs' },
     os: { t: 'Colunas para O.S.:', c: 'num | client | tecnico | abertura | previsao | status | desc' }
   };
@@ -1704,13 +1704,20 @@ async function importRows(rows){
           const cfg=EXTRA_CFG[target];if(!cfg){skipped++;updProgress();return;}
           const obj={};
           cfg.fields.forEach(f=>{const v=findCol(row,f.k)||(f.k==='nome'?findCol(row,'client'):'');obj[f.k]=String(v).trim();});
-          // Extrai situação do campo obs para estoque (ex: "LOCADO / GSL..." → "Locado")
-          if(target==='estoque'&&!obj.situacao&&obj.obs){
-            const fw=obj.obs.split('/')[0].trim().toLowerCase();
-            if(fw.includes('locad')||fw.includes('entreg'))obj.situacao='Locado';
-            else if(fw.includes('devolv')||fw.includes('dispon'))obj.situacao='Disponível';
-            else if(fw.includes('manut'))obj.situacao='Em Manutenção';
-            else if(fw.includes('extrav'))obj.situacao='Extraviado';
+          // Extrai situação e contrato do campo obs para estoque (ex: "LOCADO / GSL 1015.7200/25")
+          if(target==='estoque'&&obj.obs){
+            const parts=obj.obs.split('/');
+            const fw=(parts[0]||'').trim().toLowerCase();
+            if(!obj.situacao){
+              if(fw.includes('locad')||fw.includes('entreg'))obj.situacao='Locado';
+              else if(fw.includes('devolv')||fw.includes('dispon'))obj.situacao='Disponível';
+              else if(fw.includes('manut'))obj.situacao='Em Manutenção';
+              else if(fw.includes('extrav'))obj.situacao='Extraviado';
+            }
+            if(!obj.contrato&&parts.length>1){
+              const contratoRaw=parts.slice(1).join('/').trim();
+              if(contratoRaw)obj.contrato=contratoRaw;
+            }
           }
           // Proteção contra duplicata por código (estoque) ou nome (outros)
           const dupeField=obj.codigo?'codigo':'nome';
@@ -1824,7 +1831,7 @@ function saveExtraDB(tab){localStorage.setItem(EXTRA_KEYS[tab],JSON.stringify(ex
 loadExtraDB();
 
 const EXTRA_CFG={
-  estoque:{title:'Estoque',fields:[{k:'codigo',l:'Código / Nº Série',t:'text',ph:'Ex: 22802A0577',req:true},{k:'nome',l:'Produto / Descrição',t:'text',ph:'Nome do produto',req:true},{k:'cat',l:'Categoria',t:'text',ph:'Ex: Rádio VHF, Rádio UHF...'},{k:'situacao',l:'Situação',t:'select',opts:['Disponível','Locado','Em Manutenção','Extraviado']},{k:'precoLoc',l:'Preço de Locação',t:'text',ph:'Ex: 150,00'},{k:'local',l:'Localizado em',t:'text',ph:'Ex: Nome do cliente'},{k:'obs',l:'Observações',t:'textarea',ph:''}],cols:['codigo','nome','cat','situacao','precoLoc','local','obs'],badge:'be'},
+  estoque:{title:'Estoque',fields:[{k:'codigo',l:'Código / Nº Série',t:'text',ph:'Ex: 22802A0577',req:true},{k:'nome',l:'Produto / Descrição',t:'text',ph:'Nome do produto',req:true},{k:'cat',l:'Categoria',t:'text',ph:'Ex: Rádio VHF, Rádio UHF...'},{k:'situacao',l:'Situação',t:'select',opts:['Disponível','Locado','Em Manutenção','Extraviado']},{k:'contrato',l:'Contrato',t:'text',ph:'Ex: GSL 1015.7200/25'},{k:'precoLoc',l:'Preço de Locação',t:'text',ph:'Ex: 150,00'},{k:'local',l:'Localizado em',t:'text',ph:'Ex: Nome do cliente'},{k:'obs',l:'Observações',t:'textarea',ph:''}],cols:['codigo','nome','cat','situacao','contrato','precoLoc','local','obs'],badge:'be'},
   os:{title:'Ordem de Serviço',fields:[{k:'num',l:'Nº O.S.',t:'text',ph:'',req:true},{k:'client',l:'Cliente',t:'text',ph:'',req:true},{k:'tecnico',l:'Técnico',t:'text',ph:''},{k:'categoria',l:'Categoria',t:'text',ph:''},{k:'prioridade',l:'Prioridade',t:'text',ph:''},{k:'status',l:'Status',t:'text',ph:''},{k:'abertura',l:'Abertura',t:'text',ph:''},{k:'solicitante',l:'Solicitante',t:'text',ph:''},{k:'email',l:'E-mail',t:'text',ph:''},{k:'tel',l:'Telefone',t:'text',ph:''},{k:'contrato',l:'Contrato',t:'text',ph:''},{k:'centroCusto',l:'Centro de Custo',t:'text',ph:''},{k:'modelo',l:'Modelo',t:'text',ph:''},{k:'ativo',l:'Ativo/Asset',t:'text',ph:''},{k:'chamado',l:'Chamado',t:'text',ph:''},{k:'desc',l:'Serviço Solicitado',t:'textarea',ph:''},{k:'inicio',l:'Início',t:'text',ph:''},{k:'fim',l:'Fim',t:'text',ph:''},{k:'worklog',l:'Work Log',t:'textarea',ph:''},{k:'valMaterial',l:'Val. Material',t:'text',ph:''},{k:'valMdo',l:'Val. M.D.O',t:'text',ph:''},{k:'valExterno',l:'Val. Externo',t:'text',ph:''},{k:'abertoPor',l:'Aberto por',t:'text',ph:''}],cols:['num','client','tecnico','categoria','status','prioridade'],badge:'bos'},
   forn:{title:'Fornecedor',fields:[{k:'nome',l:'Fornecedor',t:'text',ph:'Razão social',req:true},{k:'cnpj',l:'CNPJ',t:'text',ph:'00.000.000/0000-00'},{k:'contato',l:'Contato',t:'text',ph:'Nome do responsável'},{k:'tel',l:'Telefone',t:'text',ph:'(00) 00000-0000'},{k:'email',l:'E-mail',t:'text',ph:'email@fornecedor.com'},{k:'cat',l:'Categoria',t:'text',ph:'Ex: Equipamentos, Serviços...'},{k:'obs',l:'Observações',t:'textarea',ph:''}],cols:['nome','cnpj','contato','tel','email','cat','obs'],badge:'bf'},
   cli:{title:'Cliente',fields:[{k:'nome',l:'Cliente',t:'text',ph:'Razão social / Nome',req:true},{k:'doc',l:'CNPJ / CPF',t:'text',ph:'00.000.000/0000-00'},{k:'contato',l:'Contato',t:'text',ph:'Nome do responsável'},{k:'tel',l:'Telefone',t:'text',ph:'(00) 00000-0000'},{k:'email',l:'E-mail',t:'text',ph:'email@cliente.com'},{k:'cidade',l:'Cidade / UF',t:'text',ph:'Ex: São Paulo / SP'},{k:'obs',l:'Observações',t:'textarea',ph:''}],cols:['nome','doc','contato','tel','email','cidade','obs'],badge:'bc'},
